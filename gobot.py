@@ -222,7 +222,7 @@ async def on_message(message):
             go_category = discord.utils.get(message.guild.categories, name='go-games')
 
             try:
-                directory = f'data\{guild_id_str}\games'
+                directory = f'data/{guild_id_str}/games'
 
                 used_ids = []
                 
@@ -323,9 +323,9 @@ async def on_message(message):
                             
                     await message.channel.send(f'All games stopped successfully. Command ran by: {message.author.mention}')
                     
-                except Exception as e:
+                except:
                     
-                    await message.channel.send(f'All game room channels were deleted however the data was not deleted from the server. Error: {str(e)}')
+                    await message.channel.send(f'All game room channels were deleted however the data was not deleted from the server.')
             else:
                 
                 await message.channel.send(f'{message.author.mention} you must be an admin to stop all ongoing go games.')
@@ -366,9 +366,9 @@ async def on_message(message):
 
                 await go_lobby.send(f'The game in {room_name} was ended by {message.author.mention}.')
                                     
-            except Exception as e:
+            except:
                 
-                await go_lobby.send(f'The channel \'{room_name}\' was deleted by {message.author.mention}, however the server failed to delete the data. Error: {str(e)}')
+                await go_lobby.send(f'The channel \'{room_name}\' was deleted by {message.author.mention}, however the server failed to delete the data.')
 
         #Resign command for players in the game
         if message.content.startswith('!resign'):
@@ -543,4 +543,4 @@ async def on_message(message):
                 await message.author.send('It\'s not your turn to play a move in that game!')
 
             
-client.run('nearly fked it up by uploading token')
+client.run('')
