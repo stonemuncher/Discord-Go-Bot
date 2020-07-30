@@ -374,7 +374,7 @@ async def on_message(message):
         if message.content.startswith('!resign'):
 
             #Grab the game data from the assosciated file
-            with open(f'data\{guild_id_str}\games\{room_name}.json', 'r') as f:
+            with open(f'data/{guild_id_str}/games/{room_name}.json', 'r') as f:
                 game_info = json.load(f)
                 
             #Check that the player is playing in that game
@@ -414,7 +414,7 @@ async def on_message(message):
         if message.content.startswith('!play'):
 
             #Grab the game data from the assosciated file
-            with open(f'data\{guild_id_str}\games\{room_name}.json', 'r') as f:
+            with open(f'data/{guild_id_str}/games/{room_name}.json', 'r') as f:
                 game_info = json.load(f)
                 
             #Check if the sender is one of the players in the game and that it is their turn
