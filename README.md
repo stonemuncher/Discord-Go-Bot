@@ -9,15 +9,15 @@ Started work on this go bot for discord 28/07/20
 * Sets up channels and categories when joining
 * Saves game data and requests incase of bot restart
 
-#TO DO LIST
-##Pre-Release
+# TO DO LIST
+## Pre-Release
 * Sort out stones overlapping with coordinates - need ideas for this
 * Add a !pass
 * Track captures
 * Mark dead stones at end of game (manually) and count territory (automatically)
 * Make it so you can't play against yourself (good for testing)
 * Add random colours (nigiri) at start of game, along with indicator of whose move it is
-##Other things to add
+## Other things to add
 * Better formatted !help command
 * Direct challenges between users
 * Private games
