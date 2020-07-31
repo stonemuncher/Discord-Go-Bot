@@ -8,9 +8,87 @@ import os
 client = discord.Client()
 
 
+def load_requests(guild_id):
+    
+    with open(f'data/{guild_id}/requests.json', 'r') as f:
+        return json.load(f)
+
+
+def save_requests(requests, guild_id):
+    
+    with open(f'data/{guild_id}/requests.json', 'w') as f:
+        json.dump(requests, f)
+
+
+def load_game_info(guild_id, room_name):
+
+    with open(f'data/{guild_id}/games/{room_name}.json', 'r') as f:
+        return json.load(f)
+
+
+def save_game_info(game_info, guild_id, room_name):
+    
+    with open(f'data/{guild_id}/games/{room_name}.json', 'w') as f:
+        json.dump(game_info, f)
+
+    
+def create_guild_files(guild_id):
+
+    #Check if folder exists already - this happens if user adds bot, kicks it then readds it!
+    if not os.path.isdir(f'data/{guild_id_str}'):
+        
+        os.mkdir(f'data/{guild_id_str}')
+        os.mkdir(f'data/{guild_id_str}/boards')
+        os.mkdir(f'data/{guild_id_str}/games')
+        
+        save_requests({}, guild_id)
+
+
+def get_go_lobby_cmds():
+    
+    return """
+
+!help - shows a list of commands
+
+!game - create a game request
+
+!cancel - cancel your active game request
+
+!requests - show a list of active game requests
+
+!stopallgames (admin only) - delete all games and data
+
+"""
+
+
+def get_game_room_cmds():
+    
+    return """
+
+!play [move] - play your move in a game, [move] is in the format [Letter][Number] e.g. !play A6, or !play B9
+
+!resign - resign from the game
+
+!stop (admin only) - stop the game
+
+"""
+
+
+def delete_game_data(room_name, guild_id):
+
+    os.remove(f'data/{guild_id}/games/{room_name}.json')
+    
+    #Since the initial board image isn't saved when the game is created
+    #this is necessary incase of !stop or !resign on a game before a move is made
+    if os.path.isfile(f'{room_name}.png'):
+        
+        os.remove(f'data/{guild_id_str}/boards/{room_name}.png')
+
+        
 @client.event
 async def on_ready():
     print("Go Bot is activated")
+
 
 @client.event
 async def on_guild_join(guild):
@@ -35,14 +113,9 @@ async def on_guild_join(guild):
 
     #Attempt to create necessary folders for data storage
     try:
-
-        if not os.path.isdir(f'data/{guild_id_str}'):
-            os.mkdir(f'data/{guild_id_str}')
-            os.mkdir(f'data/{guild_id_str}/boards')
-            os.mkdir(f'data/{guild_id_str}/games')
-            with open(f'data/{guild_id_str}/requests.json', 'w') as f:
-                json.dump({}, f)
+        create_guild_files(guild_id_str)
         await go_lobby.send('Setup successfull')
+        
     except Exception as e:
         await go_lobby.send('Failed to setup correctly. Error: {}'.format(str(e)))
         
@@ -70,27 +143,11 @@ async def on_message(message):
                                   title = 'Go Bot commands')
 
             embed.add_field(name = '\n\nCommands for go-lobby',
-                            value = """           
-!help - shows a list of commands
-
-!game - create a game request
-
-!cancel - cancel your active game request
-
-!requests - show a list of active game requests
-
-!stopallgames (admin only) - delete all games and data
-                                    """,
+                            value = get_go_lobby_cmds,
                             inline = False)
             
             embed.add_field(name = '\n\nCommands for game-rooms',
-                            value = """
-!play [move] - play your move in a game, [move] is in the format [Letter][Number] e.g. !play A6, or !play B9
-
-!resign - resign from the game
-
-!stop (admin only) - stop the game
-                                    """,
+                            value = get_game_room_cmds,
                             inline = False,
                             )
 
@@ -103,8 +160,7 @@ async def on_message(message):
         if message.content.startswith('!game'):
 
             #Load current requests
-            with open(f'data/{guild_id_str}/requests.json', 'r') as f:
-                requests = json.load(f)
+            requests = load_requests(guild_id_str)
 
             #If the sender already has a request open, tell them and don't make a new one
             if message.author.id in requests:
@@ -124,8 +180,7 @@ async def on_message(message):
                     #Add the message id of the request to the requests dict and save in the file
                     requests[message.author.id] = request_msg.id
                     
-                    with open(f'data/{guild_id_str}/requests.json', 'w') as f:
-                        json.dump(requests, f)
+                    save_requests(requests, guild_id_str)
 
                 except:
                     await message.channel.send(f'{message.author.mention}, there was a problem creating the game request :(')
@@ -134,9 +189,7 @@ async def on_message(message):
         #Command to cancel a game request
         if message.content.startswith('!cancel'):
             
-            #Load current requests
-            with open(f'data/{guild_id_str}/requests.json', 'r') as f:
-                requests = json.load(f)
+            requests = load_requests(guild_id_str)
 
             if str(message.author.id) in requests:
 
@@ -145,8 +198,7 @@ async def on_message(message):
                     await old_req.delete()
                     del requests[str(message.author.id)]
                     
-                    with open(f'data/{guild_id_str}/requests.json', 'w') as f:
-                        requests = json.dump(requests, f)
+                    save_requests(requests, guild_id_str)
                         
                     await message.channel.send(f'{message.author.mention}, your game request was cancelled successfully')
                     
@@ -160,10 +212,8 @@ async def on_message(message):
         #Command to view all active requests
         if message.content.startswith('!requests'):
 
-           #Load active requests
-            with open(f'data/{guild_id_str}/requests.json', 'r') as f:
-                requests = json.load(f)
-
+            requests = load_requests(guild_id_str)
+            
             response = ''
             count = 1
 
@@ -191,8 +241,7 @@ async def on_message(message):
                 return
 
             #Load current requests
-            with open(f'data/{guild_id_str}/requests.json', 'r') as f:
-                requests = json.load(f)
+            requests = load_requests(guild_id_str)
 
             requester_id = args[1].strip('@<>!')
 
@@ -211,10 +260,12 @@ async def on_message(message):
             try:
                     old_req = await message.channel.fetch_message(requests[str(requester_id)])
                     await old_req.delete()
+
+                    #Remove the old request from the dictionary
                     del requests[str(requester_id)]
                     
-                    with open(f'data/{guild_id_str}/requests.json', 'w') as f:
-                        requests = json.dump(requests, f)
+                    save_requests(requests, guild_id_str)
+                    
             except:
                 await message.channel.send('The game request seems to have been lost. Please try again with a new request.')
                 
@@ -262,9 +313,9 @@ async def on_message(message):
                           'move_count': 0,
                           'ko': ()
                          }
-                          
-            with open(f'data/{guild_id_str}/games/{room_name}.json', 'w') as f:
-                json.dump(game_info, f)
+            
+            #Save info              
+            save_game_info(game_info, guild_id_str, room_name)
 
             #Get the channel using id of a spam channel for sending images, to grab url to be used when editing embeds' images because discord.py poopy and you can't edit an embed's image with a local image
             spam_channel = discord.utils.get(message.guild.channels, name='go-bot-spam')
@@ -353,29 +404,18 @@ async def on_message(message):
 
             #Try to delete all assosciated server side files
             try:
-                
-                filename = f'{room_name}.json'
-                os.remove(f'data/{guild_id_str}/games/{filename}')
-                #print('Deleted file: {}'.format(filename))
-
-
-                filename = f'{room_name}.png'
-                if os.path.isfile(filename):
-                    os.remove(f'data/{guild_id_str}/boards/{filename}')
-                    #print('Deleted image: {}'.format(filename))
+                delete_game_data(room_name, guild_id_str)
 
                 await go_lobby.send(f'The game in {room_name} was ended by {message.author.mention}.')
                                     
             except:
-                
                 await go_lobby.send(f'The channel \'{room_name}\' was deleted by {message.author.mention}, however the server failed to delete the data.')
 
         #Resign command for players in the game
         if message.content.startswith('!resign'):
 
             #Grab the game data from the assosciated file
-            with open(f'data/{guild_id_str}/games/{room_name}.json', 'r') as f:
-                game_info = json.load(f)
+            game_info = load_game_info(guild_id_str, room_name)
                 
             #Check that the player is playing in that game
             if(message.author.id == game_info['p1_info'][1]) or (message.author.id == game_info['p2_info'][1]):
@@ -393,29 +433,21 @@ async def on_message(message):
                 await message.channel.delete()
 
                 try:
-                    
-                    #Delete assosciated server side files
-                    os.remove(f'data/{guild_id_str}/games/{room_name}.json')
-                    if os.path.isfile(f'{room_name}.png'):
-                        os.remove(f'data/{guild_id_str}/boards/{room_name}.png')
+                    delete_game_data(room_name, guild_id_str)
 
                 except:
-
                     print('Error files weren\'t deleted.')
 
                 await go_lobby.send(f'The game in {room_name} has ended. <@{winner}> has won by resignation!')
                 
             else:
-
                 await message.author.send('You can\'t resign from a game that isn\'t your own! Start a game with !start!')
                 
 
         #Play move command for players in the game
         if message.content.startswith('!play'):
 
-            #Grab the game data from the assosciated file
-            with open(f'data/{guild_id_str}/games/{room_name}.json', 'r') as f:
-                game_info = json.load(f)
+            game_info = load_game_info(guild_id_str, room_name)
                 
             #Check if the sender is one of the players in the game and that it is their turn
             if (message.author.id == game_info['p1_info'][1] and game_info['p1_info'][2] == game_info['turn']) or (message.author.id == game_info['p2_info'][1] and game_info['p2_info'][2] == game_info['turn']):
@@ -441,6 +473,7 @@ async def on_message(message):
                 elif int(move[1:]) < 1 or int(move[1:]) > 19:                      
                     await message.author.send(help_msg)
                     return
+                
                 x = TOP_ROW_LETTERS.index(move[0])
                 y = 19 - int(move[1:]) 
                 game_info["last_move"] = move
@@ -503,17 +536,14 @@ async def on_message(message):
                     except:
                         game_info["turn_info"] += 'Something went wrong. Please try again.' 
 
-                with open(f'data/{guild_id_str}/games/{room_name}.json', 'w') as f:
-                    json.dump(game_info, f)
+                #Save game info
+                save_game_info(game_info, guild_id_str, room_name)
                     
                 #Create a PIL image called board_img, which is the baseboard.png template with all of the occupied stones pasted on. This is done in boardrender.py (not really render but whatevs)
                 board_img = set_pieces(current_board.list_occupied_points())
 
                 #Save the board as data/guild_id/images/game-room-x.png
                 save_board(board_img, guild_id_str, room_name) 
-
-                #DEBUG
-                #print(current_board.list_occupied_points()) 
 
                 #Get the channel using id of a spam channel for sending images, to grab url to be used when editing embeds' images because discord.py == poopy and you can't edit an embed's image with a local image
                 spam_channel = discord.utils.get(message.guild.channels, name='go-bot-spam')
@@ -539,7 +569,6 @@ async def on_message(message):
                 await last_msg[0].edit(embed = embed) 
                 
             else:
-
                 await message.author.send('It\'s not your turn to play a move in that game!')
 
             
