@@ -7,6 +7,51 @@ import os
 
 client = discord.Client()
 
+def please_god_give_me_strength_attempt_to_create_neccessaty_folders_for_data_storage(guild_id_str):
+    try:
+        if not os.path.isdir(f'data/{guild_id_str}'):
+            os.mkdir(f'data/{guild_id_str}')
+            os.mkdir(f'data/{guild_id_str}/boards')
+            os.mkdir(f'data/{guild_id_str}/games')
+            with open(f'data/{guild_id_str}/requests.json', 'w') as f:
+                json.dump({}, f)
+        await go_lobby.send('Setup successfull')
+    except Exception as e:
+        await go_lobby.send('Failed to setup correctly. Error: {}'.format(str(e)))
+
+def please_god_give_me_strength_render_help_game():
+    return """
+!play [move] - play your move in a game, [move] is in the format [Letter][Number] e.g. !play A6, or !play B9
+
+!resign - resign from the game
+
+!stop (admin only) - stop the game
+                                    """
+
+def please_god_give_me_strength_render_help_lobby():
+    return """           
+!help - shows a list of commands
+
+!game - create a game request
+
+!cancel - cancel your active game request
+
+!requests - show a list of active game requests
+
+!stopallgames (admin only) - delete all games and data
+                                    """
+
+def please_god_give_me_strength_handle_help_command():
+    embed = discord.Embed(colour = discord.Colour.purple(),
+                                  title = 'Go Bot commands')
+    embed.add_field(name = '\n\nCommands for go-lobby',
+                    value = please_god_give_me_strength_render_help(),
+                    inline = False)
+    embed.add_field(name = '\n\nCommands for game-rooms',
+                    value = please_god_give_me_strength_render_help_game(),
+                    inline = False)
+    embed.set_footer(text = f'!help requested by {message.author.name}')
+    return embed
 
 @client.event
 async def on_ready():
@@ -33,18 +78,8 @@ async def on_guild_join(guild):
     #Grab guild ID
     guild_id_str = str(guild.id)
 
-    #Attempt to create necessary folders for data storage
-    try:
-
-        if not os.path.isdir(f'data/{guild_id_str}'):
-            os.mkdir(f'data/{guild_id_str}')
-            os.mkdir(f'data/{guild_id_str}/boards')
-            os.mkdir(f'data/{guild_id_str}/games')
-            with open(f'data/{guild_id_str}/requests.json', 'w') as f:
-                json.dump({}, f)
-        await go_lobby.send('Setup successfull')
-    except Exception as e:
-        await go_lobby.send('Failed to setup correctly. Error: {}'.format(str(e)))
+    #Attempt to create necessary folders for data storage #now this comment is obsolete AF :)
+    please_god_give_me_strength_attempt_to_create_neccessaty_folders_for_data_storage(guild_id_str)
         
 @client.event
 async def on_message(message):
@@ -65,43 +100,14 @@ async def on_message(message):
     if message.channel.name == 'go-lobby':
 
         #Command to view all commands
+
         if message.content.startswith('!help'):
-            embed = discord.Embed(colour = discord.Colour.purple(),
-                                  title = 'Go Bot commands')
-
-            embed.add_field(name = '\n\nCommands for go-lobby',
-                            value = """           
-!help - shows a list of commands
-
-!game - create a game request
-
-!cancel - cancel your active game request
-
-!requests - show a list of active game requests
-
-!stopallgames (admin only) - delete all games and data
-                                    """,
-                            inline = False)
-            
-            embed.add_field(name = '\n\nCommands for game-rooms',
-                            value = """
-!play [move] - play your move in a game, [move] is in the format [Letter][Number] e.g. !play A6, or !play B9
-
-!resign - resign from the game
-
-!stop (admin only) - stop the game
-                                    """,
-                            inline = False,
-                            )
-
-            embed.set_footer(text = f'!help requested by {message.author.name}')
-            
+            embed = please_god_give_me_strength_handle_help_command()
             await message.channel.send(embed=embed)
-
-            
+           
         #Command to create a game request
         if message.content.startswith('!game'):
-
+            
             #Load current requests
             with open(f'data/{guild_id_str}/requests.json', 'r') as f:
                 requests = json.load(f)
