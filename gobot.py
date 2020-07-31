@@ -334,8 +334,8 @@ async def on_message(message):
 
             #Set permissions to allow only players in the game to message the channel
             overwrites = {
-            guild.default_role: discord.PermissionOverwrite(send_messages=False),
-            guild.me: discord.PermissionOverwrite(send_messages=True),
+            message.guild.default_role: discord.PermissionOverwrite(send_messages=False),
+            message.guild.me: discord.PermissionOverwrite(send_messages=True),
             player1: discord.PermissionOverwrite(send_messages=True),
             player2: discord.PermissionOverwrite(send_messages=True)
             }
