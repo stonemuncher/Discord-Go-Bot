@@ -3,10 +3,13 @@ from boardrender import *
 from sgfmill import boards
 import json
 import os
-
+import argparse
 
 client = discord.Client()
 
+parser = argparse.ArgumentParser()
+parser.add_argument("token", help="Input bot token")
+args = parser.parse_args()
 
 def load_requests(guild_id):
     
@@ -579,5 +582,5 @@ async def on_message(message):
             else:
                 await message.author.send('It\'s not your turn to play a move in that game!')
 
-            
-client.run('')
+
+client.run(args.token)
