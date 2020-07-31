@@ -8,25 +8,25 @@ import os
 client = discord.Client()
 
 
-def get_requests(guild_id):
+def load_requests(guild_id):
     
     with open(f'data/{guild_id}/requests.json', 'r') as f:
         return json.load(f)
 
 
-def put_requests(requests, guild_id):
+def save_requests(requests, guild_id):
     
     with open(f'data/{guild_id}/requests.json', 'w') as f:
         json.dump(requests, f)
 
 
-def get_game_info(guild_id, room_name):
+def load_game_info(guild_id, room_name):
 
     with open(f'data/{guild_id}/games/{room_name}.json', 'r') as f:
         return json.load(f)
 
 
-def put_game_info(game_info, guild_id, room_name):
+def save_game_info(game_info, guild_id, room_name):
     
     with open(f'data/{guild_id}/games/{room_name}.json', 'w') as f:
         json.dump(game_info, f)
@@ -41,8 +41,7 @@ def create_guild_files(guild_id):
         os.mkdir(f'data/{guild_id_str}/boards')
         os.mkdir(f'data/{guild_id_str}/games')
         
-        with open(f'data/{guild_id_str}/requests.json', 'w') as f:
-            json.dump({}, f)
+        save_requests({}, guild_id)
 
 
 def get_go_lobby_cmds():
@@ -75,7 +74,7 @@ def get_game_room_cmds():
 """
 
 
-def delete_assoc_files(room_name, guild_id):
+def delete_game_data(room_name, guild_id):
 
     os.remove(f'data/{guild_id}/games/{room_name}.json')
     
@@ -161,7 +160,7 @@ async def on_message(message):
         if message.content.startswith('!game'):
 
             #Load current requests
-            requests = get_requests(guild_id_str)
+            requests = load_requests(guild_id_str)
 
             #If the sender already has a request open, tell them and don't make a new one
             if message.author.id in requests:
@@ -181,7 +180,7 @@ async def on_message(message):
                     #Add the message id of the request to the requests dict and save in the file
                     requests[message.author.id] = request_msg.id
                     
-                    put_requests(requests, guild_id_str)
+                    save_requests(requests, guild_id_str)
 
                 except:
                     await message.channel.send(f'{message.author.mention}, there was a problem creating the game request :(')
@@ -190,7 +189,7 @@ async def on_message(message):
         #Command to cancel a game request
         if message.content.startswith('!cancel'):
             
-            requests = get_requests(guild_id_str)
+            requests = load_requests(guild_id_str)
 
             if str(message.author.id) in requests:
 
@@ -199,7 +198,7 @@ async def on_message(message):
                     await old_req.delete()
                     del requests[str(message.author.id)]
                     
-                    put_requests(requests, guild_id_str)
+                    save_requests(requests, guild_id_str)
                         
                     await message.channel.send(f'{message.author.mention}, your game request was cancelled successfully')
                     
@@ -213,7 +212,7 @@ async def on_message(message):
         #Command to view all active requests
         if message.content.startswith('!requests'):
 
-            requests = get_requests(guild_id_str)
+            requests = load_requests(guild_id_str)
             
             response = ''
             count = 1
@@ -242,7 +241,7 @@ async def on_message(message):
                 return
 
             #Load current requests
-            requests = get_requests(guild_id_str)
+            requests = load_requests(guild_id_str)
 
             requester_id = args[1].strip('@<>!')
 
@@ -265,7 +264,7 @@ async def on_message(message):
                     #Remove the old request from the dictionary
                     del requests[str(requester_id)]
                     
-                    put_requests(requests, guild_id_str)
+                    save_requests(requests, guild_id_str)
                     
             except:
                 await message.channel.send('The game request seems to have been lost. Please try again with a new request.')
@@ -316,7 +315,7 @@ async def on_message(message):
                          }
             
             #Save info              
-            put_game_info(game_info, guild_id_str, room_name)
+            save_game_info(game_info, guild_id_str, room_name)
 
             #Get the channel using id of a spam channel for sending images, to grab url to be used when editing embeds' images because discord.py poopy and you can't edit an embed's image with a local image
             spam_channel = discord.utils.get(message.guild.channels, name='go-bot-spam')
@@ -405,7 +404,7 @@ async def on_message(message):
 
             #Try to delete all assosciated server side files
             try:
-                delete_assoc_files(room_name, guild_id_str)
+                delete_game_data(room_name, guild_id_str)
 
                 await go_lobby.send(f'The game in {room_name} was ended by {message.author.mention}.')
                                     
@@ -416,7 +415,7 @@ async def on_message(message):
         if message.content.startswith('!resign'):
 
             #Grab the game data from the assosciated file
-            game_info = get_game_info(guild_id_str, room_name)
+            game_info = load_game_info(guild_id_str, room_name)
                 
             #Check that the player is playing in that game
             if(message.author.id == game_info['p1_info'][1]) or (message.author.id == game_info['p2_info'][1]):
@@ -434,7 +433,7 @@ async def on_message(message):
                 await message.channel.delete()
 
                 try:
-                    delete_assoc_files(room_name, guild_id_str)
+                    delete_game_data(room_name, guild_id_str)
 
                 except:
                     print('Error files weren\'t deleted.')
@@ -448,7 +447,7 @@ async def on_message(message):
         #Play move command for players in the game
         if message.content.startswith('!play'):
 
-            game_info = get_game_info(guild_id_str, room_name)
+            game_info = load_game_info(guild_id_str, room_name)
                 
             #Check if the sender is one of the players in the game and that it is their turn
             if (message.author.id == game_info['p1_info'][1] and game_info['p1_info'][2] == game_info['turn']) or (message.author.id == game_info['p2_info'][1] and game_info['p2_info'][2] == game_info['turn']):
@@ -538,7 +537,7 @@ async def on_message(message):
                         game_info["turn_info"] += 'Something went wrong. Please try again.' 
 
                 #Save game info
-                put_game_info(game_info, guild_id_str, room_name)
+                save_game_info(game_info, guild_id_str, room_name)
                     
                 #Create a PIL image called board_img, which is the baseboard.png template with all of the occupied stones pasted on. This is done in boardrender.py (not really render but whatevs)
                 board_img = set_pieces(current_board.list_occupied_points())
