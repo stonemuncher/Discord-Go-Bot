@@ -20,7 +20,7 @@ Started work on this go bot for discord 28/07/20
 - [ ] Exports - to sgf, png
 - [ ] Add a !undo
 - [ ] Sort out illegal suicides
-- [ ] Create game rooms with write perms only for players in the game and admins
+- [x] Create game rooms with write perms only for players in the game and admins
 ## Other things to add
 - [ ] Better formatted !help command
 - [ ] Direct challenges between users
@@ -32,4 +32,3 @@ Started work on this go bot for discord 28/07/20
 - [ ] Handicap games
 - [ ] Timed games
 - [ ] Timer on game requests
-

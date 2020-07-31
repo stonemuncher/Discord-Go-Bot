@@ -3,10 +3,13 @@ from boardrender import *
 from sgfmill import boards
 import json
 import os
-
+import argparse
 
 client = discord.Client()
 
+parser = argparse.ArgumentParser()
+parser.add_argument("token", help="Input bot token")
+args = parser.parse_args()
 
 def load_requests(guild_id):
     
@@ -297,9 +300,6 @@ async def on_message(message):
             room_id = count
             room_name = f'game-room-{room_id}'
 
-            #Create new channel for the game in the correct position down the go-games category
-            new_channel = await message.guild.create_text_channel(room_name, category = go_category, position=(room_id+3))
-
             #Create dictionary of game info, and save it in the respectively named json file
             game_info = {'turn': 1,
                           'b_moves': [],
@@ -334,6 +334,17 @@ async def on_message(message):
 
             #Set footer
             embed.set_footer(text='Click the title for zoomable board!')
+
+            #Set permissions to allow only players in the game to message the channel
+            overwrites = {
+            message.guild.default_role: discord.PermissionOverwrite(send_messages=False),
+            message.guild.me: discord.PermissionOverwrite(send_messages=True),
+            player1: discord.PermissionOverwrite(send_messages=True),
+            player2: discord.PermissionOverwrite(send_messages=True)
+            }
+            
+            #Create new channel for the game in the correct position down the go-games category
+            new_channel = await message.guild.create_text_channel(room_name, category = go_category, position=(room_id+3), overwrites=overwrites)
             
             #Send the embed to the newly created game room channel
             await new_channel.send(embed=embed)
@@ -571,5 +582,5 @@ async def on_message(message):
             else:
                 await message.author.send('It\'s not your turn to play a move in that game!')
 
-            
-client.run('')
+
+client.run(args.token)

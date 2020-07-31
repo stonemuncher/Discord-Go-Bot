@@ -6,6 +6,7 @@ def coordinate_to_pixel(x, y):
     x = ((x + 1) * 2 - 3) * 10 + 22 
     y = ((y + 1) * 2 - 3) * 10 + 21
 
+    return (x, y)
     
 def set_pieces(occupied_points, one_colour = False, blind = False, last_move = ()):
 
@@ -18,27 +19,25 @@ def set_pieces(occupied_points, one_colour = False, blind = False, last_move = (
 
         if blind:
 
-            x = coordinate_to_pixel(last_move[0])
-            y = coordinate_to_pixel(last_move[1])
+            pixel_coords = coordinate_to_pixel(last_move[0], last_move[1])
 
             #Only update the board with the last move
-            board.paste(black, (x, y), mask = black)
+            board.paste(black, pixel_coords, mask = black)
 
         else:
             
             for point in occupied_points:
                 
-                x = coordinate_to_pixel(point[1][0])
-                y = coordinate_to_pixel(point[1][1])
+                pixel_coords = coordinate_to_pixel(point[1][0], point[1][1])
 
                 if one_colour: 
-                    board.paste(white, (x, y), mask = white) #One colour only :)
+                    board.paste(white, pixel_coords, mask = white) #One colour only :)
                     
                 elif point[0] == "w":
-                    board.paste(white, (x, y), mask = white) #Paste white stone png at correct coordinate
+                    board.paste(white, pixel_coords, mask = white) #Paste white stone png at correct coordinate
                         
                 elif point[0] == "b":
-                    board.paste(black, (x, y), mask = black) #Paste black stone png at correct coordinate
+                    board.paste(black, pixel_coords, mask = black) #Paste black stone png at correct coordinate
 
         white.close()
         black.close()
