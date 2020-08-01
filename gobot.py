@@ -84,6 +84,7 @@ def add_game_room_cmds(GAME_ROOM_CMDS, embed):
 
 def delete_game_data(room_name, guild_id):
 
+    
     os.remove(f'data/{guild_id}/games/{room_name}.json')
 
     #Since the initial board image isn't saved when the game is created
@@ -301,7 +302,11 @@ async def on_message(message):
             #Set up some variables for the new room
             room_id = count
             room_name = f'game-room-{room_id}'
-
+            
+            #Random turn
+            p1_colour = random.choice((1, -1))
+            p2_colour = p1_colour * -1
+                
             #Create dictionary of game info, and save it in the respectively named json file
             game_info = {'turn': 1,
                           'b_moves': [],
@@ -309,8 +314,8 @@ async def on_message(message):
                           'empty_pts': [(x, y) for x in range(19) for y in range(19)],
                           'last_move': (),
                           'turn_info': '',
-                          'p1_info': [player1.name, player1.id, 1],
-                          'p2_info': [player2.name, player2.id, -1],
+                          'p1_info': [player1.name, player1.id, p1_colour],
+                          'p2_info': [player2.name, player2.id, p2_colour],
                           'room_id': room_id,
                           'move_count': 0,
                           'ko': ()
@@ -325,10 +330,18 @@ async def on_message(message):
             #Send the default empty board to the spam channel
             default_board = await spam_channel.send(file=discord.File('baseboard.png')) 
 
+            #Grab names of players based on colour 
+            if game_info['p1_info'][2] == 1:
+                black_player_name = game_info['p1_info'][0]
+                white_player_name = game_info['p2_info'][0]
+            else:
+                black_player_name = game_info['p2_info'][0]
+                white_player_name = game_info['p1_info'][0]
+                
             #Set up the embed
             embed = discord.Embed(colour = discord.Colour.dark_orange(),
                                   title = f'{room_name.capitalize()} | Move {game_info["move_count"]}',
-                                  description = f'Game started between {game_info["p1_info"][0]} and {game_info["p2_info"][0]}!',
+                                  description = f'Game started between {game_info["p1_info"][0]} and {game_info["p2_info"][0]}!\n\nBlack: {black_player_name}\nWhite: {white_player_name}\n\nIt\'s {black_player_name}\'s turn to play!',
                                   url = default_board.attachments[0].url)
             
             #Set the embed's image to the URL scraped from the image that was just sent to the spam channel

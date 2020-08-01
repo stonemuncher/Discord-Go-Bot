@@ -16,7 +16,7 @@ Started work on this go bot for discord 28/07/20
 - [ ] Track captures
 - [ ] Mark dead stones at end of game (manually) and count territory (automatically)
 - [ ] Make it so you can't play against yourself (good for testing)
-- [ ] Add random colours (nigiri) at start of game, along with indicator of whose move it is
+- [x] Add random colours (nigiri) at start of game, along with indicator of whose move it is
 - [ ] Exports - to sgf, png
 - [ ] Sort out illegal suicides
 - [x] Create game rooms with write perms only for players in the game and admins

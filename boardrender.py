@@ -3,7 +3,7 @@ from PIL import Image
 def coordinate_to_pixel(x, y):
     
     #Necessary so that stones are drawn on intersections
-    x = ((x + 1) * 2 - 3) * 10 + 22 
+    x = ((x + 1) * 2 - 3) * 10 + 22
     y = ((y + 1) * 2 - 3) * 10 + 21
 
     return (x, y)
