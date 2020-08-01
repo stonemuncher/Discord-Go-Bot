@@ -455,15 +455,14 @@ async def on_message(message):
             else:
                 await message.author.send('You can\'t resign from a game that isn\'t your own! Start a game with !start!')
                 
-
-        #Play move command for players in the game
-        if message.content.startswith('!play'):
-
-            game_info = load_game_info(guild_id_str, room_name)
+        #Check if the sender is one of the players in the game and that it is their turn
+        if (message.author.id == game_info['p1_info'][1] and game_info['p1_info'][2] == game_info['turn']) or (message.author.id == game_info['p2_info'][1] and game_info['p2_info'][2] == game_info['turn']):
                 
-            #Check if the sender is one of the players in the game and that it is their turn
-            if (message.author.id == game_info['p1_info'][1] and game_info['p1_info'][2] == game_info['turn']) or (message.author.id == game_info['p2_info'][1] and game_info['p2_info'][2] == game_info['turn']):
-                             
+            #Play move command for players in the game
+            if message.content.startswith('!play'):
+
+                game_info = load_game_info(guild_id_str, room_name)
+                
                 current_board = boards.Board(19)
                 current_board.apply_setup(game_info['b_moves'], game_info['w_moves'], game_info['empty_pts'])
 
@@ -503,7 +502,7 @@ async def on_message(message):
                             ko = current_board.play(x, y, 'b')
 
                         #Else if white's turn, do the same for white
-                        elif game_info["turn"] == -1:
+                        elif game_info['turn'] == -1:
 
                             #Same as above
                             ko = current_board.play(x, y, 'w')
@@ -515,7 +514,7 @@ async def on_message(message):
                             game_info['ko'] = ()
                             
                         #If no error has been thrown at this point, the move was successful so record this to be sent in the embed update
-                        game_info["turn_info"] += 'Move Successful!'
+                        game_info['turn_info'] += 'Move Successful!'
 
                         #Update turn and movecount
                         game_info['turn'] *= -1
@@ -530,24 +529,24 @@ async def on_message(message):
                         for x in range(19):
                             for y in range(19):
                                 if current_board.get(x, y) == 'b':
-                                    game_info["b_moves"].append((x, y))
+                                    game_info['b_moves'].append((x, y))
                                 elif current_board.get(x, y) == 'w':
-                                    game_info["w_moves"].append((x, y))
+                                    game_info['w_moves'].append((x, y))
                                 else:
-                                    game_info["empty_pts"].append((x, y))
+                                    game_info['empty_pts'].append((x, y))
 
                     #Called when a stone is placed in a spot already occupied
                     except ValueError: 
-                        game_info["turn_info"] += 'Uh oh. This spot is already occupied by a stone!'
+                        game_info['turn_info'] += 'Uh oh. This spot is already occupied by a stone!'
 
                     #Called when a stone is placed in a spot that doesn't exist, e.g. on a 19x19 board, at coordinate 69, 420
                     except IndexError: 
-                        game_info["turn_info"] += 'Uh oh. This coordinate doesn\'t exist!'
+                        game_info['turn_info'] += 'Uh oh. This coordinate doesn\'t exist!'
 
                     #Eh wtf
                     except:
-                        game_info["turn_info"] += 'Something went wrong. Please try again.' 
-
+                        game_info['turn_info'] += 'Something went wrong. Please try again.' 
+                    
                 #Save game info
                 save_game_info(game_info, guild_id_str, room_name)
                     
@@ -557,31 +556,58 @@ async def on_message(message):
                 #Save the board as data/guild_id/images/game-room-x.png
                 save_board(board_img, guild_id_str, room_name) 
 
-                #Get the channel using id of a spam channel for sending images, to grab url to be used when editing embeds' images because discord.py == poopy and you can't edit an embed's image with a local image
-                spam_channel = discord.utils.get(message.guild.channels, name='go-bot-spam')
+            #Command to pass
+            elif message.content.startswith('!pass'):
 
-                new_board = await spam_channel.send(file=discord.File(f'data/{guild_id_str}/boards/{room_name}.png'))
+                game_info = load_game_info(guild_id_str, room_name)
+                if game_info['last_move'] == 'pass':
 
-                #Set up the embed
-                embed = discord.Embed(colour = discord.Colour.dark_orange(),
-                                      title = f'{room_name.capitalize()} | Move {game_info["move_count"]}',
-                                      description = game_info['turn_info'],
-                                      url = new_board.attachments[0].url)
+                    game_info['turn_info'] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\nBoth players passed! Game entering scoring phase. (Not yet finished)'
+                    #Add stuff in here for scoring mode.
+                else:
+                    #Edit game info for a pass move
+                    game_info["last_move"] = 'pass'
+                    game_info["turn_info"] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n{message.author.name} just passed!'
+                    game_info['turn'] *= -1
+                    game_info['move_count'] += 1
+
+            #MOVED THIS BLOB TO CATER FOR !pass AND !play:
+                    
+            #Add a note as to whose turn it is now
+            if message.author.id == game_info['p1_info'][1]:
                 
-                #Again, scrape URL from spam channel in order to be able to update initial embed with the new image
-                embed.set_image(url=new_board.attachments[0].url) 
-                
-                #Set footer
-                embed.set_footer(text='Click the title for zoomable board!')
-                
-                #Get the last message in the channel, e.g. the initial embed sent by the bot
-                last_msg = await message.channel.history(limit=1).flatten()
-                
-                #Edit with new image url and title
-                await last_msg[0].edit(embed = embed) 
-                
+                game_info['turn_info'] += f'\n\nIt\'s now {game_info["p2_info"][0]}\'s turn to play.'
+
             else:
-                await message.author.send('It\'s not your turn to play a move in that game!')
+                game_info['turn_info'] += f'\n\nIt\'s now {game_info["p1_info"][0]}\'s turn to play.'
+
+            #Get the channel using id of a spam channel for sending images, to grab url to be used when editing embeds' images because discord.py == poopy and you can't edit an embed's image with a local image
+            spam_channel = discord.utils.get(message.guild.channels, name='go-bot-spam')
+
+            new_board = await spam_channel.send(file=discord.File(f'data/{guild_id_str}/boards/{room_name}.png'))
+
+            #Set up the embed
+            embed = discord.Embed(colour = discord.Colour.dark_orange(),
+                                  title = f'{room_name.capitalize()} | Move {game_info["move_count"]}',
+                                  description = game_info['turn_info'],
+                                  url = new_board.attachments[0].url)
+            
+            #Again, scrape URL from spam channel in order to be able to update initial embed with the new image
+            embed.set_image(url=new_board.attachments[0].url) 
+            
+            #Set footer
+            embed.set_footer(text='Click the title for zoomable board!')
+            
+            #Get the last message in the channel, e.g. the initial embed sent by the bot
+            last_msg = await message.channel.history(limit=1).flatten()
+            
+            #Edit with new image url and title
+            await last_msg[0].edit(embed = embed)
+            
+
+                
+        else:
+            await message.author.send('It\'s not your turn to play a move in that game!')
 
 
 client.run(args.token)

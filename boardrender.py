@@ -8,7 +8,7 @@ def coordinate_to_pixel(x, y):
 
     return (x, y)
     
-def set_pieces(occupied_points, one_colour = False, blind = False, last_move = ()):
+def set_pieces(occupied_points = [ ], one_colour = False, blind = False, last_move = ()):
 
     #Open the empty board image
     with Image.open('baseboard.png') as board: 
@@ -19,6 +19,10 @@ def set_pieces(occupied_points, one_colour = False, blind = False, last_move = (
 
         if blind:
 
+            #No need to update board for pass
+            if last_move == 'pass':
+                return
+            
             pixel_coords = coordinate_to_pixel(last_move[0], last_move[1])
 
             #Only update the board with the last move
