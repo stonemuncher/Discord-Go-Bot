@@ -10,11 +10,12 @@ def coordinate_to_pixel(x, y):
     
 def set_pieces(occupied_points = [ ], one_colour = False, blind = False, last_move = ()):
 
-    #Open the empty board image
-    board_img = Image.open('baseboard.png')
+    #Open the empty board image, copy it, and close it - this allows the copy to be returned without throwing an error if no edits are made
+    baseboard = Image.open('baseboard.png')
 
-    #Must load, due to PIL being weird, cannot use with Image.open('baseboard') since return happens before the image can be closed, and if not edited, throws error (e.g. on a pass first move)
-    board_edit = board_img.load()
+    board = baseboard
+
+    baseboard.close()
     
     #Load stone image files
     white = Image.open('white.png')
@@ -29,7 +30,7 @@ def set_pieces(occupied_points = [ ], one_colour = False, blind = False, last_mo
         pixel_coords = coordinate_to_pixel(last_move[0], last_move[1])
 
         #Only update the board with the last move
-        board_edit.paste(black, pixel_coords, mask = black)
+        board.paste(black, pixel_coords, mask = black)
 
     else:
         
@@ -38,18 +39,18 @@ def set_pieces(occupied_points = [ ], one_colour = False, blind = False, last_mo
             pixel_coords = coordinate_to_pixel(point[1][0], point[1][1])
 
             if one_colour: 
-                board_edit.paste(white, pixel_coords, mask = white) #One colour only :)
+                board.paste(white, pixel_coords, mask = white) #One colour only :)
                 
             elif point[0] == "w":
-                board_edit.paste(white, pixel_coords, mask = white) #Paste white stone png at correct coordinate
+                board.paste(white, pixel_coords, mask = white) #Paste white stone png at correct coordinate
                     
             elif point[0] == "b":
-                board_edit.paste(black, pixel_coords, mask = black) #Paste black stone png at correct coordinate
+                board.paste(black, pixel_coords, mask = black) #Paste black stone png at correct coordinate
 
     white.close()
     black.close()
 
-    return board_img #Return the PIL Image object of the board with all of the stones added
+    return board #Return the PIL Image object of the board with all of the stones added
 
 
 def save_board(board, guild_id, filename): #Save a board image as PNG using the ID number
