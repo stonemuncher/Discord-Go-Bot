@@ -61,7 +61,7 @@ def add_go_lobby_cmds(embed):
     
     for cmd in CMDS:
 
-        embed.add_field(name = cmd, value = f'{desc_pfx} {CMDS[cmd]}')
+        embed.add_field(name = cmd, value = f'{desc_pfx} {CMDS[cmd]}', inline = False)
 
     return embed
 
@@ -78,7 +78,7 @@ def add_game_room_cmds(embed):
     
     for cmd in CMDS:
 
-        embed.add_field(name = cmd, value = f'{desc_pfx} {CMDS[cmd]}')
+        embed.add_field(name = cmd, value = f'{desc_pfx} {CMDS[cmd]}', inline = False)
 
     return embed
 
