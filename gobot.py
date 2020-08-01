@@ -13,6 +13,7 @@ args = parser.parse_args()
 
 GAME_ROOM_CMDS = {'!play [move]': 'Play your move in a game. The format is !play [Letter][Number] - e.g. !play A6, or !play B9.',
                   '!resign': 'Resign from the game.',
+                  '!pass': 'Pass your turn.',
                   '!stop': 'Admin only command. Stop the game.'}
 
 GO_LOBBY_CMDS = {'!help': 'Get a list of commands.',
@@ -461,8 +462,19 @@ async def on_message(message):
 
                 
         #Check if the sender is one of the players in the game and that it is their turn
-        if (message.author.id == game_info['p1_info'][1] and game_info['p1_info'][2] == game_info['turn']) or (message.author.id == game_info['p2_info'][1] and game_info['p2_info'][2] == game_info['turn']) and message.content.split()[0] in GAME_ROOM_CMDS:
+        if (message.author.id == game_info['p1_info'][1] and game_info['p1_info'][2] == game_info['turn']) or (message.author.id == game_info['p2_info'][1] and game_info['p2_info'][2] == game_info['turn']):
 
+            if message.content.split()[0] not in GAME_ROOM_CMDS:
+                
+                embed = discord.Embed(colour = discord.Colour.purple(),
+                      title = 'That command isn\'t recognised!',
+                      description = 'Showing commands useable in game rooms:')
+
+                embed = add_game_room_cmds(GAME_ROOM_CMDS, embed)
+
+                message.author.send(embed=embed)
+                return
+            
             #Setup sgfmill board object with data
             current_board = boards.Board(19)
             current_board.apply_setup(game_info['b_moves'], game_info['w_moves'], game_info['empty_pts'])
