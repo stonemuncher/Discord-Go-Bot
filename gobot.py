@@ -263,11 +263,11 @@ async def on_message(message):
 
             #Generate list of requests and format, and add to embed
             for request in requests:
-                    
+
                 game_type = requests[str(request)]['type']
                 type_info = get_game_type_info(game_type)
 
-                embed.add_field(name = f'Game request from <@{request}>', value = f'Game type: {type_info}')
+                embed.add_field(name = f'Game request #{count}', value = f'Creator: <@{request}>\nGame type: {type_info}')
                 count += 1
 
             if count == 1:

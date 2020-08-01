@@ -20,13 +20,14 @@ Started work on this go bot for discord 28/07/20
 - [ ] Exports - to sgf, png
 - [ ] Sort out illegal suicides
 - [x] Create game rooms with write perms only for players in the game and admins
+- [ ] Make commands inuitive and easy to use/understand
 ## Other things to add
 - [ ] Add a !undo (real players dont use undo)
 - [x] Better formatted !help command
 - [ ] Direct challenges between users
 - [ ] Private games
 - [ ] More board sizes (would require fairly heavy refactoring)
-- [ ] As suggested by Godave - blind and one colour go
+- [x] As suggested by Godave - blind and one colour go
 - [ ] Server integration - Seequ's go server?!
 - [ ] Leaderboards (cross server?)
 - [ ] Handicap games
