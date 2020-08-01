@@ -607,6 +607,16 @@ async def on_message(message):
                                 else:
                                     game_info['empty_pts'].append((x, y))
 
+                        #Save board depending now on game type
+                        if game_info['type'] == 'normal':
+                            save_board(guild_id_str, room_name, current_board.list_occupied_points())
+
+                        elif game_info['type'] == 'onecolour':
+                            save_board(guild_id_str, room_name, current_board.list_occupied_points(), one_colour = True)
+
+                        elif game_info['type'] == 'blind':
+                            save_board(guild_id_str, room_name, blind = True, last_move = game_info['last_move'])
+                            
                     #Called when a stone is placed in a spot already occupied
                     except ValueError: 
                         game_info['turn_info'] += 'Uh oh. This spot is already occupied by a stone!'
@@ -619,15 +629,6 @@ async def on_message(message):
                     except:
                         game_info['turn_info'] += 'Something went wrong. Please try again.'
 
-                    #Save board depending now on game type
-                    if game_info['type'] == 'normal':
-                        save_board(guild_id_str, room_name, current_board.list_occupied_points())
-
-                    elif game_info['type'] == 'onecolour':
-                        save_board(guild_id_str, room_name, current_board.list_occupied_points(), one_colour = True)
-
-                    elif game_info['type'] == 'blind':
-                        save_board(guild_id_str, room_name, blind = True, last_move = game_info['last_move'])
             #Command to pass
             elif message.content.startswith('!pass'):
 
