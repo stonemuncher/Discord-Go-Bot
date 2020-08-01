@@ -202,7 +202,7 @@ async def on_message(message):
             else:
                 #Set up the request embed
                 embed = discord.Embed(colour = discord.Colour.purple(),
-                                      title = 'Game request from {message.author.name}',
+                                      title = f'Game request from {message.author.name}',
                                       description = f'Type !accept {message.author.mention} to accept the request!')
 
                 #Create some info on the game request depending on the type
