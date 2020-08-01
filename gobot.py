@@ -49,11 +49,11 @@ def save_game_info(game_info, guild_id, room_name):
 def create_guild_files(guild_id):
 
     #Check if folder exists already - this happens if user adds bot, kicks it then readds it!
-    if not os.path.isdir(f'data/{guild_id_str}'):
+    if not os.path.isdir(f'data/{guild_id}'):
         
-        os.mkdir(f'data/{guild_id_str}')
-        os.mkdir(f'data/{guild_id_str}/boards')
-        os.mkdir(f'data/{guild_id_str}/games')
+        os.mkdir(f'data/{guild_id}')
+        os.mkdir(f'data/{guild_id}/boards')
+        os.mkdir(f'data/{guild_id}/games')
         
         save_requests({}, guild_id)
 
@@ -89,7 +89,7 @@ def delete_game_data(room_name, guild_id):
     #this is necessary incase of !stop or !resign on a game before a move is made
     if os.path.isfile(f'{room_name}.png'):
         
-        os.remove(f'data/{guild_id_str}/boards/{room_name}.png')
+        os.remove(f'data/{guild_id}/boards/{room_name}.png')
 
         
 @client.event
@@ -113,7 +113,7 @@ async def on_guild_join(guild):
     guild.me: discord.PermissionOverwrite(read_messages=True)
     }
 
-    channel = await guild.create_text_channel('go-bot-spam', overwrites=overwrites)
+    await guild.create_text_channel('go-bot-spam', overwrites=overwrites)
 
     #Grab guild ID
     guild_id_str = str(guild.id)
