@@ -403,8 +403,10 @@ async def on_message(message):
 
         #Grab the room name
         room_name = message.channel.name
-        
 
+        #Load game info
+        game_info = load_game_info(guild_id_str, room_name)
+        
         #End game command for admins
         if message.content.startswith('!stop') and message.author.guild_permissions.administrator:
 
@@ -425,9 +427,6 @@ async def on_message(message):
 
         #Resign command for players in the game
         if message.content.startswith('!resign'):
-
-            #Grab the game data from the assosciated file
-            game_info = load_game_info(guild_id_str, room_name)
                 
             #Check that the player is playing in that game
             if(message.author.id == game_info['p1_info'][1]) or (message.author.id == game_info['p2_info'][1]):
@@ -461,8 +460,6 @@ async def on_message(message):
             #Play move command for players in the game
             if message.content.startswith('!play'):
 
-                game_info = load_game_info(guild_id_str, room_name)
-                
                 current_board = boards.Board(19)
                 current_board.apply_setup(game_info['b_moves'], game_info['w_moves'], game_info['empty_pts'])
 
@@ -559,7 +556,6 @@ async def on_message(message):
             #Command to pass
             elif message.content.startswith('!pass'):
 
-                game_info = load_game_info(guild_id_str, room_name)
                 if game_info['last_move'] == 'pass':
 
                     game_info['turn_info'] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\nBoth players passed! Game entering scoring phase. (Not yet finished)'
