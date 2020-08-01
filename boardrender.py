@@ -8,50 +8,42 @@ def coordinate_to_pixel(x, y):
 
     return (x, y)
     
-def set_pieces(occupied_points = [ ], one_colour = False, blind = False, last_move = ()):
+def save_board(guild_id, room_name, occupied_points = [ ], one_colour = False, blind = False, last_move = ()):
 
-    #Open the empty board image, copy it, and close it - this allows the copy to be returned without throwing an error if no edits are made
-    baseboard = Image.open('baseboard.png')
-
-    board = baseboard
-
-    baseboard.close()
-    
-    #Load stone image files
-    white = Image.open('white.png')
-    black = Image.open('black.png')
-
-    if blind:
-
-        #No need to update board for pass
-        if last_move == 'pass':
-            return
+    with Image.open('baseboard.png') as board:
         
-        pixel_coords = coordinate_to_pixel(last_move[0], last_move[1])
+       #Load stone image files
+        white = Image.open('white.png')
+        black = Image.open('black.png')
 
-        #Only update the board with the last move
-        board.paste(black, pixel_coords, mask = black)
+        if blind:
 
-    else:
-        
-        for point in occupied_points:
+            #No need to update board for pass
+            if last_move == 'pass':
+                return
             
-            pixel_coords = coordinate_to_pixel(point[1][0], point[1][1])
+            pixel_coords = coordinate_to_pixel(last_move[0], last_move[1])
 
-            if one_colour: 
-                board.paste(white, pixel_coords, mask = white) #One colour only :)
+            #Only update the board with the last move
+            board.paste(black, pixel_coords, mask = black)
+
+        else:
+            
+            for point in occupied_points:
                 
-            elif point[0] == "w":
-                board.paste(white, pixel_coords, mask = white) #Paste white stone png at correct coordinate
+                pixel_coords = coordinate_to_pixel(point[1][0], point[1][1])
+
+                if one_colour: 
+                    board.paste(white, pixel_coords, mask = white) #One colour only :)
                     
-            elif point[0] == "b":
-                board.paste(black, pixel_coords, mask = black) #Paste black stone png at correct coordinate
+                elif point[0] == "w":
+                    board.paste(white, pixel_coords, mask = white) #Paste white stone png at correct coordinate
+                        
+                elif point[0] == "b":
+                    board.paste(black, pixel_coords, mask = black) #Paste black stone png at correct coordinate
 
-    white.close()
-    black.close()
+        white.close()
+        black.close()
 
-    return board #Return the PIL Image object of the board with all of the stones added
-
-
-def save_board(board, guild_id, filename): #Save a board image as PNG using the ID number
-    board.save(f'data/{guild_id}/boards/{filename}.png', "PNG")
+        #Save the PIL image
+        board.save(f'data/{guild_id}/boards/{room_name}.png', "PNG")

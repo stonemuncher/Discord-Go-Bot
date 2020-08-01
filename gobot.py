@@ -591,12 +591,9 @@ async def on_message(message):
 
             #Save game info
             save_game_info(game_info, guild_id_str, room_name)
-                
-            #Create a PIL image called board_img, which is the baseboard.png template with all of the occupied stones pasted on. This is done in boardrender.py (not really render but whatevs)
-            board_img = set_pieces(current_board.list_occupied_points())
 
             #Save the board as data/guild_id/boards/game-room-x.png
-            save_board(board_img, guild_id_str, room_name)
+            save_board(guild_id_str, room_name, current_board.list_occupied_points)
             
             #Get the channel using id of a spam channel for sending images, to grab url to be used when editing embeds' images because discord.py == poopy and you can't edit an embed's image with a local image
             spam_channel = discord.utils.get(message.guild.channels, name='go-bot-spam')
