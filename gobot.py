@@ -4,12 +4,24 @@ from sgfmill import boards
 import json
 import os
 import argparse
+import random
 
 client = discord.Client()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("token", help="Input bot token")
 args = parser.parse_args()
+
+GAME_ROOM_CMDS = {'!play [move]': 'Play your move in a game. The format is !play [Letter][Number] - e.g. !play A6, or !play B9.',
+                  '!resign': 'Resign from the game.',
+                  '!pass': 'Pass your turn.',
+                  '!stop': 'Admin only command. Stop the game.'}
+
+GO_LOBBY_CMDS = {'!help': 'Get a list of commands.',
+                 '!game': 'Create a standard game request.',
+                 '!cancel': 'Cancel your game active game requests.',
+                 '!requests': 'Get a list of active game requests.',
+                 '!stopallgames' : 'Admin only command. Stops all games on the discord server.'}
 
 def load_requests(guild_id):
     
@@ -38,54 +50,49 @@ def save_game_info(game_info, guild_id, room_name):
 def create_guild_files(guild_id):
 
     #Check if folder exists already - this happens if user adds bot, kicks it then readds it!
-    if not os.path.isdir(f'data/{guild_id_str}'):
+    if not os.path.isdir(f'data/{guild_id}'):
         
-        os.mkdir(f'data/{guild_id_str}')
-        os.mkdir(f'data/{guild_id_str}/boards')
-        os.mkdir(f'data/{guild_id_str}/games')
+        os.mkdir(f'data/{guild_id}')
+        os.mkdir(f'data/{guild_id}/boards')
+        os.mkdir(f'data/{guild_id}/games')
         
         save_requests({}, guild_id)
 
 
-def get_go_lobby_cmds():
+def add_go_lobby_cmds(GO_LOBBY_CMDS, embed):
+
+    #Command description prefix to show where the command can be used
+    desc_pfx = '(In go-lobby)'
     
-    return """
+    for cmd in GO_LOBBY_CMDS:
 
-!help - shows a list of commands
+        embed.add_field(name = cmd, value = f'{desc_pfx} {GO_LOBBY_CMDS[cmd]}', inline = False)
 
-!game - create a game request
-
-!cancel - cancel your active game request
-
-!requests - show a list of active game requests
-
-!stopallgames (admin only) - delete all games and data
-
-"""
+    return embed
 
 
-def get_game_room_cmds():
+def add_game_room_cmds(GAME_ROOM_CMDS, embed):
+
+    #Command description prefix to show where the command can be used
+    desc_pfx = '(In game-room)'
     
-    return """
+    for cmd in GAME_ROOM_CMDS:
 
-!play [move] - play your move in a game, [move] is in the format [Letter][Number] e.g. !play A6, or !play B9
+        embed.add_field(name = cmd, value = f'{desc_pfx} {GAME_ROOM_CMDS[cmd]}', inline = False)
 
-!resign - resign from the game
-
-!stop (admin only) - stop the game
-
-"""
+    return embed
 
 
 def delete_game_data(room_name, guild_id):
 
-    os.remove(f'data/{guild_id}/games/{room_name}.json')
     
+    os.remove(f'data/{guild_id}/games/{room_name}.json')
+
     #Since the initial board image isn't saved when the game is created
     #this is necessary incase of !stop or !resign on a game before a move is made
-    if os.path.isfile(f'{room_name}.png'):
+    if os.path.isfile(f'data/{guild_id}/boards/{room_name}.png'):
         
-        os.remove(f'data/{guild_id_str}/boards/{room_name}.png')
+        os.remove(f'data/{guild_id}/boards/{room_name}.png')
 
         
 @client.event
@@ -109,7 +116,7 @@ async def on_guild_join(guild):
     guild.me: discord.PermissionOverwrite(read_messages=True)
     }
 
-    channel = await guild.create_text_channel('go-bot-spam', overwrites=overwrites)
+    await guild.create_text_channel('go-bot-spam', overwrites=overwrites)
 
     #Grab guild ID
     guild_id_str = str(guild.id)
@@ -125,7 +132,9 @@ async def on_guild_join(guild):
 @client.event
 async def on_message(message):
 
-
+    global GAME_ROOM_CMDS
+    global GO_LOBBY_CMDS
+    
     #If the message was sent by the bot, i.e. a reply then ignore it    
     if message.author.id == client.user.id: 
         return
@@ -143,16 +152,11 @@ async def on_message(message):
         #Command to view all commands
         if message.content.startswith('!help'):
             embed = discord.Embed(colour = discord.Colour.purple(),
-                                  title = 'Go Bot commands')
+                                  title = 'Go Bot',
+                                  description = 'Play go inside discord! The following commands are availiable:')
 
-            embed.add_field(name = '\n\nCommands for go-lobby',
-                            value = get_go_lobby_cmds,
-                            inline = False)
-            
-            embed.add_field(name = '\n\nCommands for game-rooms',
-                            value = get_game_room_cmds,
-                            inline = False,
-                            )
+            embed = add_go_lobby_cmds(GO_LOBBY_CMDS, embed)
+            embed = add_game_room_cmds(GAME_ROOM_CMDS, embed)
 
             embed.set_footer(text = f'!help requested by {message.author.name}')
             
@@ -300,6 +304,10 @@ async def on_message(message):
             room_id = count
             room_name = f'game-room-{room_id}'
 
+            #Random turn
+            p1_colour = random.choice((1, -1))
+            p2_colour = p1_colour * -1
+                
             #Create dictionary of game info, and save it in the respectively named json file
             game_info = {'turn': 1,
                           'b_moves': [],
@@ -307,8 +315,8 @@ async def on_message(message):
                           'empty_pts': [(x, y) for x in range(19) for y in range(19)],
                           'last_move': (),
                           'turn_info': '',
-                          'p1_info': [player1.name, player1.id, 1],
-                          'p2_info': [player2.name, player2.id, -1],
+                          'p1_info': [player1.name, player1.id, p1_colour],
+                          'p2_info': [player2.name, player2.id, p2_colour],
                           'room_id': room_id,
                           'move_count': 0,
                           'ko': ()
@@ -323,10 +331,18 @@ async def on_message(message):
             #Send the default empty board to the spam channel
             default_board = await spam_channel.send(file=discord.File('baseboard.png')) 
 
+            #Grab names of players based on colour 
+            if game_info['p1_info'][2] == 1:
+                black_player_name = game_info['p1_info'][0]
+                white_player_name = game_info['p2_info'][0]
+            else:
+                black_player_name = game_info['p2_info'][0]
+                white_player_name = game_info['p1_info'][0]
+                
             #Set up the embed
             embed = discord.Embed(colour = discord.Colour.dark_orange(),
                                   title = f'{room_name.capitalize()} | Move {game_info["move_count"]}',
-                                  description = f'Game started between {game_info["p1_info"][0]} and {game_info["p2_info"][0]}!',
+                                  description = f'Game started between {game_info["p1_info"][0]} and {game_info["p2_info"][0]}!\n\nBlack: {black_player_name}\nWhite: {white_player_name}\n\nIt\'s {black_player_name}\'s turn to play!',
                                   url = default_board.attachments[0].url)
             
             #Set the embed's image to the URL scraped from the image that was just sent to the spam channel
@@ -402,8 +418,10 @@ async def on_message(message):
 
         #Grab the room name
         room_name = message.channel.name
-        
 
+        #Load game info
+        game_info = load_game_info(guild_id_str, room_name)
+        
         #End game command for admins
         if message.content.startswith('!stop') and message.author.guild_permissions.administrator:
 
@@ -422,11 +440,11 @@ async def on_message(message):
             except:
                 await go_lobby.send(f'The channel \'{room_name}\' was deleted by {message.author.mention}, however the server failed to delete the data.')
 
+            return
+
+        
         #Resign command for players in the game
         if message.content.startswith('!resign'):
-
-            #Grab the game data from the assosciated file
-            game_info = load_game_info(guild_id_str, room_name)
                 
             #Check that the player is playing in that game
             if(message.author.id == game_info['p1_info'][1]) or (message.author.id == game_info['p2_info'][1]):
@@ -454,17 +472,30 @@ async def on_message(message):
             else:
                 await message.author.send('You can\'t resign from a game that isn\'t your own! Start a game with !start!')
                 
+            return
 
-        #Play move command for players in the game
-        if message.content.startswith('!play'):
-
-            game_info = load_game_info(guild_id_str, room_name)
                 
-            #Check if the sender is one of the players in the game and that it is their turn
-            if (message.author.id == game_info['p1_info'][1] and game_info['p1_info'][2] == game_info['turn']) or (message.author.id == game_info['p2_info'][1] and game_info['p2_info'][2] == game_info['turn']):
-                             
-                current_board = boards.Board(19)
-                current_board.apply_setup(game_info['b_moves'], game_info['w_moves'], game_info['empty_pts'])
+        #Check if the sender is one of the players in the game and that it is their turn
+        if (message.author.id == game_info['p1_info'][1] and game_info['p1_info'][2] == game_info['turn']) or (message.author.id == game_info['p2_info'][1] and game_info['p2_info'][2] == game_info['turn']):
+
+            #The !play command appears as !play [move] in the GAME_ROOM_CMDS thus needs extra check
+            if message.content.split()[0] not in GAME_ROOM_CMDS and message.content.split()[0] != '!play':
+
+                embed = discord.Embed(colour = discord.Colour.purple(),
+                      title = 'That command isn\'t recognised!',
+                      description = 'Showing commands useable in game rooms:')
+
+                embed = add_game_room_cmds(GAME_ROOM_CMDS, embed)
+
+                await message.author.send(embed=embed)
+                return
+            
+            #Setup sgfmill board object with data
+            current_board = boards.Board(19)
+            current_board.apply_setup(game_info['b_moves'], game_info['w_moves'], game_info['empty_pts'])
+
+            #Play move command for players in the game
+            if message.content.startswith('!play'):
 
                 TOP_ROW_LETTERS = 'abcdefghjklmnopqrst'
                 command_text = message.content.split()
@@ -502,7 +533,7 @@ async def on_message(message):
                             ko = current_board.play(x, y, 'b')
 
                         #Else if white's turn, do the same for white
-                        elif game_info["turn"] == -1:
+                        elif game_info['turn'] == -1:
 
                             #Same as above
                             ko = current_board.play(x, y, 'w')
@@ -514,7 +545,7 @@ async def on_message(message):
                             game_info['ko'] = ()
                             
                         #If no error has been thrown at this point, the move was successful so record this to be sent in the embed update
-                        game_info["turn_info"] += 'Move Successful!'
+                        game_info['turn_info'] += 'Move Successful!'
 
                         #Update turn and movecount
                         game_info['turn'] *= -1
@@ -529,58 +560,82 @@ async def on_message(message):
                         for x in range(19):
                             for y in range(19):
                                 if current_board.get(x, y) == 'b':
-                                    game_info["b_moves"].append((x, y))
+                                    game_info['b_moves'].append((x, y))
                                 elif current_board.get(x, y) == 'w':
-                                    game_info["w_moves"].append((x, y))
+                                    game_info['w_moves'].append((x, y))
                                 else:
-                                    game_info["empty_pts"].append((x, y))
+                                    game_info['empty_pts'].append((x, y))
 
                     #Called when a stone is placed in a spot already occupied
                     except ValueError: 
-                        game_info["turn_info"] += 'Uh oh. This spot is already occupied by a stone!'
+                        game_info['turn_info'] += 'Uh oh. This spot is already occupied by a stone!'
 
                     #Called when a stone is placed in a spot that doesn't exist, e.g. on a 19x19 board, at coordinate 69, 420
                     except IndexError: 
-                        game_info["turn_info"] += 'Uh oh. This coordinate doesn\'t exist!'
+                        game_info['turn_info'] += 'Uh oh. This coordinate doesn\'t exist!'
 
                     #Eh wtf
                     except:
-                        game_info["turn_info"] += 'Something went wrong. Please try again.' 
+                        game_info['turn_info'] += 'Something went wrong. Please try again.'
 
-                #Save game info
-                save_game_info(game_info, guild_id_str, room_name)
-                    
-                #Create a PIL image called board_img, which is the baseboard.png template with all of the occupied stones pasted on. This is done in boardrender.py (not really render but whatevs)
-                board_img = set_pieces(current_board.list_occupied_points())
+                    #Save the board as data/guild_id/boards/game-room-x.png
+                    save_board(guild_id_str, room_name, current_board.list_occupied_points())
 
-                #Save the board as data/guild_id/images/game-room-x.png
-                save_board(board_img, guild_id_str, room_name) 
+            #Command to pass
+            elif message.content.startswith('!pass'):
 
-                #Get the channel using id of a spam channel for sending images, to grab url to be used when editing embeds' images because discord.py == poopy and you can't edit an embed's image with a local image
-                spam_channel = discord.utils.get(message.guild.channels, name='go-bot-spam')
+                if game_info['last_move'] == 'pass':
 
-                new_board = await spam_channel.send(file=discord.File(f'data/{guild_id_str}/boards/{room_name}.png'))
+                    game_info['turn_info'] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\nBoth players passed! Game entering scoring phase. (Not yet finished)'
+                    #Add stuff in here for scoring mode.
+                else:
+                    #Edit game info for a pass move
+                    game_info["last_move"] = 'pass'
+                    game_info["turn_info"] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n{message.author.name} just passed!'
+                    game_info['turn'] *= -1
+                    game_info['move_count'] += 1
 
-                #Set up the embed
-                embed = discord.Embed(colour = discord.Colour.dark_orange(),
-                                      title = f'{room_name.capitalize()} | Move {game_info["move_count"]}',
-                                      description = game_info['turn_info'],
-                                      url = new_board.attachments[0].url)
+
+                #MOVED THIS BLOB TO CATER FOR !pass AND !play:
+                        
+            #Add a note as to whose turn it is now
+            if message.author.id == game_info['p1_info'][1]:
                 
-                #Again, scrape URL from spam channel in order to be able to update initial embed with the new image
-                embed.set_image(url=new_board.attachments[0].url) 
-                
-                #Set footer
-                embed.set_footer(text='Click the title for zoomable board!')
-                
-                #Get the last message in the channel, e.g. the initial embed sent by the bot
-                last_msg = await message.channel.history(limit=1).flatten()
-                
-                #Edit with new image url and title
-                await last_msg[0].edit(embed = embed) 
-                
+                game_info['turn_info'] += f'\n\nIt\'s now {game_info["p2_info"][0]}\'s turn to play.'
+
             else:
-                await message.author.send('It\'s not your turn to play a move in that game!')
+                game_info['turn_info'] += f'\n\nIt\'s now {game_info["p1_info"][0]}\'s turn to play.'
+
+            #Save game info
+            save_game_info(game_info, guild_id_str, room_name)
+            
+            #Get the channel using id of a spam channel for sending images, to grab url to be used when editing embeds' images because discord.py == poopy and you can't edit an embed's image with a local image
+            spam_channel = discord.utils.get(message.guild.channels, name='go-bot-spam')
+
+            new_board = await spam_channel.send(file=discord.File(f'data/{guild_id_str}/boards/{room_name}.png'))
+
+            #Set up the embed
+            embed = discord.Embed(colour = discord.Colour.dark_orange(),
+                                  title = f'{room_name.capitalize()} | Move {game_info["move_count"]}',
+                                  description = game_info['turn_info'],
+                                  url = new_board.attachments[0].url)
+            
+            #Again, scrape URL from spam channel in order to be able to update initial embed with the new image
+            embed.set_image(url=new_board.attachments[0].url) 
+            
+            #Set footer
+            embed.set_footer(text='Click the title for zoomable board!')
+            
+            #Get the last message in the channel, e.g. the initial embed sent by the bot
+            last_msg = await message.channel.history(limit=1).flatten()
+            
+            #Edit with new image url and title
+            await last_msg[0].edit(embed = embed)
+            
+
+                
+        else:
+            await message.author.send('It\'s not your turn to make a move in that game!')
 
 
 client.run(args.token)

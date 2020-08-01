@@ -3,22 +3,25 @@ from PIL import Image
 def coordinate_to_pixel(x, y):
     
     #Necessary so that stones are drawn on intersections
-    x = ((x + 1) * 2 - 3) * 10 + 22 
+    x = ((x + 1) * 2 - 3) * 10 + 22
     y = ((y + 1) * 2 - 3) * 10 + 21
 
     return (x, y)
     
-def set_pieces(occupied_points, one_colour = False, blind = False, last_move = ()):
+def save_board(guild_id, room_name, occupied_points = [ ], one_colour = False, blind = False, last_move = ()):
 
-    #Open the empty board image
-    with Image.open('baseboard.png') as board: 
-
-        #Load stone image files
+    with Image.open('baseboard.png') as board:
+        
+       #Load stone image files
         white = Image.open('white.png')
         black = Image.open('black.png')
 
         if blind:
 
+            #No need to update board for pass
+            if last_move == 'pass':
+                return
+            
             pixel_coords = coordinate_to_pixel(last_move[0], last_move[1])
 
             #Only update the board with the last move
@@ -42,8 +45,5 @@ def set_pieces(occupied_points, one_colour = False, blind = False, last_move = (
         white.close()
         black.close()
 
-        return board #Return the PIL Image object of the board with all of the stones added
-
-
-def save_board(board, guild_id, filename): #Save a board image as PNG using the ID number
-    board.save(f'data/{guild_id}/boards/{filename}.png', "PNG")
+        #Save the PIL image
+        board.save(f'data/{guild_id}/boards/{room_name}.png', "PNG")
