@@ -12,16 +12,16 @@ Started work on this go bot for discord 28/07/20
 # TO DO LIST
 ## Pre-Release
 - [ ] Sort out stones overlapping with coordinates - need ideas for this
-- [ ] Add a !pass
+- [x] Add a !pass
 - [ ] Track captures
 - [ ] Mark dead stones at end of game (manually) and count territory (automatically)
 - [ ] Make it so you can't play against yourself (good for testing)
 - [ ] Add random colours (nigiri) at start of game, along with indicator of whose move it is
 - [ ] Exports - to sgf, png
-- [ ] Add a !undo
 - [ ] Sort out illegal suicides
 - [x] Create game rooms with write perms only for players in the game and admins
 ## Other things to add
+- [ ] Add a !undo (real players dont use undo)
 - [ ] Better formatted !help command
 - [ ] Direct challenges between users
 - [ ] Private games
