@@ -4,6 +4,7 @@ from sgfmill import boards
 import json
 import os
 import argparse
+import random
 
 client = discord.Client()
 
@@ -302,7 +303,7 @@ async def on_message(message):
             #Set up some variables for the new room
             room_id = count
             room_name = f'game-room-{room_id}'
-            
+
             #Random turn
             p1_colour = random.choice((1, -1))
             p2_colour = p1_colour * -1
