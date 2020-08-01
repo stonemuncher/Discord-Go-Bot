@@ -84,7 +84,7 @@ def add_game_room_cmds(GAME_ROOM_CMDS, embed):
 def delete_game_data(room_name, guild_id):
 
     os.remove(f'data/{guild_id}/games/{room_name}.json')
-    
+    print(f'removed {room_name}.json')
     #Since the initial board image isn't saved when the game is created
     #this is necessary incase of !stop or !resign on a game before a move is made
     if os.path.isfile(f'{room_name}.png'):
@@ -425,6 +425,9 @@ async def on_message(message):
             except:
                 await go_lobby.send(f'The channel \'{room_name}\' was deleted by {message.author.mention}, however the server failed to delete the data.')
 
+            return
+
+        
         #Resign command for players in the game
         if message.content.startswith('!resign'):
                 
@@ -453,6 +456,9 @@ async def on_message(message):
                 
             else:
                 await message.author.send('You can\'t resign from a game that isn\'t your own! Start a game with !start!')
+                
+            return
+
                 
         #Check if the sender is one of the players in the game and that it is their turn
         if (message.author.id == game_info['p1_info'][1] and game_info['p1_info'][2] == game_info['turn']) or (message.author.id == game_info['p2_info'][1] and game_info['p2_info'][2] == game_info['turn']) and message.content.split()[0] in GAME_ROOM_CMDS:
@@ -545,19 +551,19 @@ async def on_message(message):
                     except:
                         game_info['turn_info'] += 'Something went wrong. Please try again.'  
 
-                #Command to pass
-                elif message.content.startswith('!pass'):
+            #Command to pass
+            elif message.content.startswith('!pass'):
 
-                    if game_info['last_move'] == 'pass':
+                if game_info['last_move'] == 'pass':
 
-                        game_info['turn_info'] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\nBoth players passed! Game entering scoring phase. (Not yet finished)'
-                        #Add stuff in here for scoring mode.
-                    else:
-                        #Edit game info for a pass move
-                        game_info["last_move"] = 'pass'
-                        game_info["turn_info"] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n{message.author.name} just passed!'
-                        game_info['turn'] *= -1
-                        game_info['move_count'] += 1
+                    game_info['turn_info'] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\nBoth players passed! Game entering scoring phase. (Not yet finished)'
+                    #Add stuff in here for scoring mode.
+                else:
+                    #Edit game info for a pass move
+                    game_info["last_move"] = 'pass'
+                    game_info["turn_info"] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n{message.author.name} just passed!'
+                    game_info['turn'] *= -1
+                    game_info['move_count'] += 1
 
 
                 #MOVED THIS BLOB TO CATER FOR !pass AND !play:
@@ -570,37 +576,37 @@ async def on_message(message):
                 else:
                     game_info['turn_info'] += f'\n\nIt\'s now {game_info["p1_info"][0]}\'s turn to play.'
 
-                #Save game info
-                save_game_info(game_info, guild_id_str, room_name)
-                    
-                #Create a PIL image called board_img, which is the baseboard.png template with all of the occupied stones pasted on. This is done in boardrender.py (not really render but whatevs)
-                board_img = set_pieces(current_board.list_occupied_points())
+            #Save game info
+            save_game_info(game_info, guild_id_str, room_name)
+                
+            #Create a PIL image called board_img, which is the baseboard.png template with all of the occupied stones pasted on. This is done in boardrender.py (not really render but whatevs)
+            board_img = set_pieces(current_board.list_occupied_points())
 
-                #Save the board as data/guild_id/images/game-room-x.png
-                save_board(board_img, guild_id_str, room_name)
-                
-                #Get the channel using id of a spam channel for sending images, to grab url to be used when editing embeds' images because discord.py == poopy and you can't edit an embed's image with a local image
-                spam_channel = discord.utils.get(message.guild.channels, name='go-bot-spam')
+            #Save the board as data/guild_id/images/game-room-x.png
+            save_board(board_img, guild_id_str, room_name)
+            
+            #Get the channel using id of a spam channel for sending images, to grab url to be used when editing embeds' images because discord.py == poopy and you can't edit an embed's image with a local image
+            spam_channel = discord.utils.get(message.guild.channels, name='go-bot-spam')
 
-                new_board = await spam_channel.send(file=discord.File(f'data/{guild_id_str}/boards/{room_name}.png'))
+            new_board = await spam_channel.send(file=discord.File(f'data/{guild_id_str}/boards/{room_name}.png'))
 
-                #Set up the embed
-                embed = discord.Embed(colour = discord.Colour.dark_orange(),
-                                      title = f'{room_name.capitalize()} | Move {game_info["move_count"]}',
-                                      description = game_info['turn_info'],
-                                      url = new_board.attachments[0].url)
-                
-                #Again, scrape URL from spam channel in order to be able to update initial embed with the new image
-                embed.set_image(url=new_board.attachments[0].url) 
-                
-                #Set footer
-                embed.set_footer(text='Click the title for zoomable board!')
-                
-                #Get the last message in the channel, e.g. the initial embed sent by the bot
-                last_msg = await message.channel.history(limit=1).flatten()
-                
-                #Edit with new image url and title
-                await last_msg[0].edit(embed = embed)
+            #Set up the embed
+            embed = discord.Embed(colour = discord.Colour.dark_orange(),
+                                  title = f'{room_name.capitalize()} | Move {game_info["move_count"]}',
+                                  description = game_info['turn_info'],
+                                  url = new_board.attachments[0].url)
+            
+            #Again, scrape URL from spam channel in order to be able to update initial embed with the new image
+            embed.set_image(url=new_board.attachments[0].url) 
+            
+            #Set footer
+            embed.set_footer(text='Click the title for zoomable board!')
+            
+            #Get the last message in the channel, e.g. the initial embed sent by the bot
+            last_msg = await message.channel.history(limit=1).flatten()
+            
+            #Edit with new image url and title
+            await last_msg[0].edit(embed = embed)
             
 
                 
