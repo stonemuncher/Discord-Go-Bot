@@ -18,7 +18,7 @@ GAME_ROOM_CMDS = {'!play [move]': 'Play your move in a game. The format is !play
                   '!stop': 'Admin only command. Stop the game.'}
 
 GO_LOBBY_CMDS = {'!help': 'Get a list of commands.',
-                 '!game': 'Create a standard game request.',
+                 '!game [type]': 'If [type] is left blank, a normal game is made. Other types include \'onecolour\' (One colour go) and \'blind\' (Blind go)',
                  '!cancel': 'Cancel your game active game requests.',
                  '!requests': 'Get a list of active game requests.',
                  '!stopallgames' : 'Admin only command. Stops all games on the discord server.'}
