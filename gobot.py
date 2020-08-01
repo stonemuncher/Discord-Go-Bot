@@ -11,6 +11,16 @@ parser = argparse.ArgumentParser()
 parser.add_argument("token", help="Input bot token")
 args = parser.parse_args()
 
+GAME_ROOM_CMDS = {'!play [move]': 'Play your move in a game. The format is !play [Letter][Number] - e.g. !play A6, or !play B9.',
+                  '!resign': 'Resign from the game.',
+                  '!stop': 'Admin only command. Stop the game.'}
+
+GO_LOBBY_CMDS = {'!help': 'Get a list of commands.',
+                 '!game': 'Create a standard game request.',
+                 '!cancel': 'Cancel your game active game requests.',
+                 '!requests': 'Get a list of active game requests.',
+                 '!stopallgames' : 'Admin only command. Stops all games on the discord server.'}
+
 def load_requests(guild_id):
     
     with open(f'data/{guild_id}/requests.json', 'r') as f:
@@ -47,38 +57,26 @@ def create_guild_files(guild_id):
         save_requests({}, guild_id)
 
 
-def add_go_lobby_cmds(embed):
+def add_go_lobby_cmds(GO_LOBBY_CMDS, embed):
 
     #Command description prefix to show where the command can be used
     desc_pfx = '(In go-lobby)'
-
-    #List of commands
-    CMDS = {'!help': 'Get a list of commands.',
-            '!game': 'Create a standard game request.',
-            '!cancel': 'Cancel your game active game requests.',
-            '!requests': 'Get a list of active game requests.',
-            '!stopallgames' : 'Admin only command. Stops all games on the discord server.'}
     
     for cmd in CMDS:
 
-        embed.add_field(name = cmd, value = f'{desc_pfx} {CMDS[cmd]}', inline = False)
+        embed.add_field(name = cmd, value = f'{desc_pfx} {GO_LOBBY_CMDS[cmd]}', inline = False)
 
     return embed
 
 
-def add_game_room_cmds(embed):
+def add_game_room_cmds(GAME_ROOM_CMDS, embed):
 
     #Command description prefix to show where the command can be used
     desc_pfx = '(In game-room)'
-
-    #List of commands
-    CMDS = {'!play [move]': 'Play your move in a game. The format is !play [Letter][Number] - e.g. !play A6, or !play B9.',
-            '!resign': 'Resign from the game.',
-            '!stop': 'Admin only command. Stop the game.'}
     
-    for cmd in CMDS:
+    for cmd in GAME_ROOM_CMDS:
 
-        embed.add_field(name = cmd, value = f'{desc_pfx} {CMDS[cmd]}', inline = False)
+        embed.add_field(name = cmd, value = f'{desc_pfx} {GAME_ROOM_CMDS[cmd]}', inline = False)
 
     return embed
 
@@ -131,7 +129,9 @@ async def on_guild_join(guild):
 @client.event
 async def on_message(message):
 
-
+    global GAME_ROOM_CMDS
+    global GO_LOBBY_CMDS
+    
     #If the message was sent by the bot, i.e. a reply then ignore it    
     if message.author.id == client.user.id: 
         return
@@ -152,8 +152,8 @@ async def on_message(message):
                                   title = 'Go Bot',
                                   description = 'Play go inside discord! The following commands are availiable:')
 
-            embed = add_go_lobby_cmds(embed)
-            embed = add_game_room_cmds(embed)
+            embed = add_go_lobby_cmds(GO_LOBBY_CMDS, embed)
+            embed = add_game_room_cmds(GAME_ROOM_CMDS, embed)
 
             embed.set_footer(text = f'!help requested by {message.author.name}')
             
@@ -455,7 +455,7 @@ async def on_message(message):
                 await message.author.send('You can\'t resign from a game that isn\'t your own! Start a game with !start!')
                 
         #Check if the sender is one of the players in the game and that it is their turn
-        if (message.author.id == game_info['p1_info'][1] and game_info['p1_info'][2] == game_info['turn']) or (message.author.id == game_info['p2_info'][1] and game_info['p2_info'][2] == game_info['turn']):
+        if (message.author.id == game_info['p1_info'][1] and game_info['p1_info'][2] == game_info['turn']) or (message.author.id == game_info['p2_info'][1] and game_info['p2_info'][2] == game_info['turn']) and message.content.split()[0] in GAME_ROOM_CMDS:
 
             #Setup sgfmill board object with data
             current_board = boards.Board(19)
