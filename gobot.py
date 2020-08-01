@@ -202,7 +202,7 @@ async def on_message(message):
             else:
                 #Set up the request embed
                 embed = discord.Embed(colour = discord.Colour.purple(),
-                                      title = 'Game request from {message.author.name}',
+                                      title = f'Game request from {message.author.name}',
                                       description = f'Type !accept {message.author.mention} to accept the request!')
 
                 #Create some info on the game request depending on the type
@@ -263,8 +263,8 @@ async def on_message(message):
 
             #Generate list of requests and format, and add to embed
             for request in requests:
-
-                game_type = requests[request]['type']
+                    
+                game_type = requests[str(request)]['type']
                 type_info = get_game_type_info(game_type)
 
                 embed.add_field(name = f'Game request from <@{request}>', value = f'Game type: {type_info}')
@@ -616,7 +616,7 @@ async def on_message(message):
 
                         elif game_info['type'] == 'blind':
                             save_board(guild_id_str, room_name, blind = True, last_move = game_info['last_move'])
-                            
+
                     #Called when a stone is placed in a spot already occupied
                     except ValueError: 
                         game_info['turn_info'] += 'Uh oh. This spot is already occupied by a stone!'
