@@ -85,7 +85,6 @@ def add_game_room_cmds(GAME_ROOM_CMDS, embed):
 def delete_game_data(room_name, guild_id):
 
     os.remove(f'data/{guild_id}/games/{room_name}.json')
-    print(f'removed {room_name}.json')
     #Since the initial board image isn't saved when the game is created
     #this is necessary incase of !stop or !resign on a game before a move is made
     if os.path.isfile(f'{room_name}.png'):
@@ -465,14 +464,15 @@ async def on_message(message):
         if (message.author.id == game_info['p1_info'][1] and game_info['p1_info'][2] == game_info['turn']) or (message.author.id == game_info['p2_info'][1] and game_info['p2_info'][2] == game_info['turn']):
 
             if message.content.split()[0] not in GAME_ROOM_CMDS:
-                
+
+                print(message.content.split()[0])
                 embed = discord.Embed(colour = discord.Colour.purple(),
                       title = 'That command isn\'t recognised!',
                       description = 'Showing commands useable in game rooms:')
 
                 embed = add_game_room_cmds(GAME_ROOM_CMDS, embed)
 
-                message.author.send(embed=embed)
+                await message.author.send(embed=embed)
                 return
             
             #Setup sgfmill board object with data
@@ -594,7 +594,7 @@ async def on_message(message):
             #Create a PIL image called board_img, which is the baseboard.png template with all of the occupied stones pasted on. This is done in boardrender.py (not really render but whatevs)
             board_img = set_pieces(current_board.list_occupied_points())
 
-            #Save the board as data/guild_id/images/game-room-x.png
+            #Save the board as data/guild_id/boards/game-room-x.png
             save_board(board_img, guild_id_str, room_name)
             
             #Get the channel using id of a spam channel for sending images, to grab url to be used when editing embeds' images because discord.py == poopy and you can't edit an embed's image with a local image
@@ -623,7 +623,7 @@ async def on_message(message):
 
                 
         else:
-            await message.author.send('It\'s not your turn to play a move in that game!')
+            await message.author.send('It\'s not your turn to make a move in that game!')
 
 
 client.run(args.token)
