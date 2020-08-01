@@ -463,7 +463,8 @@ async def on_message(message):
         #Check if the sender is one of the players in the game and that it is their turn
         if (message.author.id == game_info['p1_info'][1] and game_info['p1_info'][2] == game_info['turn']) or (message.author.id == game_info['p2_info'][1] and game_info['p2_info'][2] == game_info['turn']):
 
-            if message.content.split()[0] not in GAME_ROOM_CMDS:
+            #The !play command appears as !play [move] in the GAME_ROOM_CMDS thus needs extra check
+            if message.content.split()[0] not in GAME_ROOM_CMDS and message.content.split()[0] != '!play':
 
                 print(message.content.split()[0])
                 embed = discord.Embed(colour = discord.Colour.purple(),
