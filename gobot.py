@@ -581,13 +581,13 @@ async def on_message(message):
 
                 #MOVED THIS BLOB TO CATER FOR !pass AND !play:
                         
-                #Add a note as to whose turn it is now
-                if message.author.id == game_info['p1_info'][1]:
-                    
-                    game_info['turn_info'] += f'\n\nIt\'s now {game_info["p2_info"][0]}\'s turn to play.'
+            #Add a note as to whose turn it is now
+            if message.author.id == game_info['p1_info'][1]:
+                
+                game_info['turn_info'] += f'\n\nIt\'s now {game_info["p2_info"][0]}\'s turn to play.'
 
-                else:
-                    game_info['turn_info'] += f'\n\nIt\'s now {game_info["p1_info"][0]}\'s turn to play.'
+            else:
+                game_info['turn_info'] += f'\n\nIt\'s now {game_info["p1_info"][0]}\'s turn to play.'
 
             #Save game info
             save_game_info(game_info, guild_id_str, room_name)
