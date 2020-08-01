@@ -63,7 +63,7 @@ def add_go_lobby_cmds(GO_LOBBY_CMDS, embed):
     #Command description prefix to show where the command can be used
     desc_pfx = '(In go-lobby)'
     
-    for cmd in CMDS:
+    for cmd in GO_LOBBY_CMDS:
 
         embed.add_field(name = cmd, value = f'{desc_pfx} {GO_LOBBY_CMDS[cmd]}', inline = False)
 
