@@ -85,9 +85,10 @@ def add_game_room_cmds(GAME_ROOM_CMDS, embed):
 def delete_game_data(room_name, guild_id):
 
     os.remove(f'data/{guild_id}/games/{room_name}.json')
+    
     #Since the initial board image isn't saved when the game is created
     #this is necessary incase of !stop or !resign on a game before a move is made
-    if os.path.isfile(f'{room_name}.png'):
+    if os.path.isfile(f'data/{guild_id}/games/{room_name}.png'):
         
         os.remove(f'data/{guild_id}/boards/{room_name}.png')
 
