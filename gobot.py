@@ -202,7 +202,7 @@ async def on_message(message):
             else:
                 #Set up the request embed
                 embed = discord.Embed(colour = discord.Colour.purple(),
-                                      title = f'Game request from {message.author.name}',
+                                      title = 'Game request from {message.author.name}',
                                       description = f'Type !accept {message.author.mention} to accept the request!')
 
                 #Create some info on the game request depending on the type
@@ -559,9 +559,9 @@ async def on_message(message):
                 
                 x = TOP_ROW_LETTERS.index(move[0])
                 y = 19 - int(move[1:]) 
-                game_info["last_move"] = move
+                game_info["last_move"] = (x, y)
 
-                game_info["turn_info"] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\nLast move was {str(game_info["last_move"].capitalize())}: '
+                game_info["turn_info"] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\nLast move was {move.capitalize()}: '
 
                 if [x, y] == game_info['ko']:
                     game_info['turn_info'] += 'Uhh it\'s a ko! That\'s an illegal move.'
