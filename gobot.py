@@ -47,34 +47,40 @@ def create_guild_files(guild_id):
         save_requests({}, guild_id)
 
 
-def get_go_lobby_cmds():
+def add_go_lobby_cmds(embed):
+
+    #Command description prefix to show where the command can be used
+    desc_pfx = '(In go-lobby)'
+
+    #List of commands
+    CMDS = {'!help': 'Get a list of commands.',
+            '!game': 'Create a standard game request.',
+            '!cancel': 'Cancel your game active game requests.',
+            '!requests': 'Get a list of active game requests.',
+            '!stopallgames' : 'Admin only command. Stops all games on the discord server.'}
     
-    return """
+    for cmd in CMDS:
 
-!help - shows a list of commands
+        embed.add_field(name = cmd, value = f'{desc_pfx} {CMDS[cmd]}')
 
-!game - create a game request
-
-!cancel - cancel your active game request
-
-!requests - show a list of active game requests
-
-!stopallgames (admin only) - delete all games and data
-
-"""
+    return embed
 
 
-def get_game_room_cmds():
+def add_game_room_cmds(embed):
+
+    #Command description prefix to show where the command can be used
+    desc_pfx = '(In game-room)'
+
+    #List of commands
+    CMDS = {'!play [move]': 'Play your move in a game. The format is !play [Letter][Number] - e.g. !play A6, or !play B9.',
+            '!resign': 'Resign from the game.',
+            '!stop': 'Admin only command. Stop the game.'}
     
-    return """
+    for cmd in CMDS:
 
-!play [move] - play your move in a game, [move] is in the format [Letter][Number] e.g. !play A6, or !play B9
+        embed.add_field(name = cmd, value = f'{desc_pfx} {CMDS[cmd]}')
 
-!resign - resign from the game
-
-!stop (admin only) - stop the game
-
-"""
+    return embed
 
 
 def delete_game_data(room_name, guild_id):
@@ -143,16 +149,11 @@ async def on_message(message):
         #Command to view all commands
         if message.content.startswith('!help'):
             embed = discord.Embed(colour = discord.Colour.purple(),
-                                  title = 'Go Bot commands')
+                                  title = 'Go Bot',
+                                  description = 'Play go inside discord! The following commands are availiable:')
 
-            embed.add_field(name = '\n\nCommands for go-lobby',
-                            value = get_go_lobby_cmds,
-                            inline = False)
-            
-            embed.add_field(name = '\n\nCommands for game-rooms',
-                            value = get_game_room_cmds,
-                            inline = False,
-                            )
+            embed = add_go_lobby_cmds(embed)
+            embed = add_game_room_cmds(embed)
 
             embed.set_footer(text = f'!help requested by {message.author.name}')
             
