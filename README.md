@@ -22,7 +22,7 @@ Started work on this go bot for discord 28/07/20
 - [x] Create game rooms with write perms only for players in the game and admins
 ## Other things to add
 - [ ] Add a !undo (real players dont use undo)
-- [ ] Better formatted !help command
+- [x] Better formatted !help command
 - [ ] Direct challenges between users
 - [ ] Private games
 - [ ] More board sizes (would require fairly heavy refactoring)
