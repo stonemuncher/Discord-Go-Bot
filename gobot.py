@@ -176,8 +176,9 @@ def make_points(black_pts, white_pts):
 
 def get_dead_cmd_help():
 
-    return 'Use !dead followed by the coordinates of dead stones to remove them from the board.\
-            E.g. !dead A5 B18 K10 C4. Or to resume the game and settle a dispute or to reset dead stones, use !resume'
+    return 'Use !dead followed by the coordinates of dead stones to remove them from the board, e.g. !dead A6 B8.\n\n \
+            If you made a mistake and want to reset the dead stones, or want to resume the game, type !resume.\n\n \
+            Otherwise if all dead stones have been marked, type !done.'
 
 
 @client.event
@@ -639,7 +640,7 @@ async def on_message(message):
 
                             title = f'{room_name.capitalize()} | Remove the dead stones'
                             description = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n\
-                                            {stone} is not a valid coordinate! {get_dead_cmd_help()}'
+                                            {stone} is not a valid coordinate!\n\n{get_dead_cmd_help()}'
 
                             await send_board(guild_id_str, room_name, message, title, description)
 
@@ -665,7 +666,7 @@ async def on_message(message):
 
                             title = f'{room_name.capitalize()} | Remove the dead stones'
                             description = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n\
-                                            There isn\'t a stone at {stone}. {get_dead_cmd_help()}'
+                                            There isn\'t a stone at {stone}.\n\n{get_dead_cmd_help()}'
 
                             await send_board(guild_id_str, room_name, message, title, description)
 
@@ -685,7 +686,8 @@ async def on_message(message):
 
                     title = f'{room_name.capitalize()} | Remove the dead stones'
                     description = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n\
-                                    Removed selected dead stones. Continue to remove dead stones or reset/resume the game with !resume if you made a mistake.'
+                                    Removed selected dead stones. Continue to remove dead stones or or if you are finished type !done. \
+                                    If you made a mistake and want to reset the dead stones, or want to resume the game, type !resume.'
 
                     await send_board(guild_id_str, room_name, message, title, description)
                     
@@ -696,7 +698,7 @@ async def on_message(message):
                     #No stone coords were give
                     title = f'{room_name.capitalize()} | Remove the dead stones'
                     description = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n\
-                                    You didn\'t list the coordinates of any stones! {get_dead_cmd_help()}'
+                                    You didn\'t list the coordinates of any stones!\n\n{get_dead_cmd_help()}'
 
                     await send_board(guild_id_str, room_name, message, title, description)
 
@@ -816,7 +818,7 @@ async def on_message(message):
                 
                 #Generate occupied points outside of sgfmill (faster) since no logic is involved
                 occupied_points = make_points(game_info['b_moves'], game_info['w_moves'])
-                
+
                 if game_info['last_move'] == 'pass':
 
                     game_info['turn_info'] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\nBoth players passed! Game entering scoring phase. (Not yet finished)'
