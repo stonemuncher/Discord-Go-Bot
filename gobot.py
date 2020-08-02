@@ -767,8 +767,9 @@ async def on_message(message):
                     #Edit game info for a pass move
                     game_info["last_move"] = 'pass'
                     game_info["turn_info"] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n{message.author.name} just passed!'
-                    game_info['turn'] *= -1
                     game_info['move_count'] += 1
+                
+                game_info['turn'] *= -1
 
 
             #MOVED THIS BLOB TO CATER FOR !pass AND !play:
