@@ -145,13 +145,13 @@ def check_move(move, board_size = 19):
 
     TOP_ROW_LETTERS = {19: 'abcdefghjklmnopqrst'}
 
-    if (move[0] not in TOP_ROW_LETTERS[board_size]) or (not move[1:].isdigit()):
+    if (move[0].lower() not in TOP_ROW_LETTERS[board_size]) or (not move[1:].isdigit()):
         return False, False
 
     elif int(move[1:]) < 1 or int(move[1:]) > board_size:                      
         return False, False
     else:
-        x = TOP_ROW_LETTERS[board_size].index(move[0])
+        x = TOP_ROW_LETTERS[board_size].index(move[0].lower())
         y = board_size - int(move[1:]) 
         return x, y
 
