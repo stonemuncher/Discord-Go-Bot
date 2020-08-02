@@ -22,7 +22,7 @@ def save_board(guild_id, room_name, occupied_points = [ ], one_colour = False, b
             if last_move == 'pass':
                 return
             
-            pixel_coords = coordinate_to_pixel(int(last_move[0]), int(last_move[1]))
+            pixel_coords = coordinate_to_pixel(last_move[0], last_move[1])
 
             #Only update the board with the last move
             board.paste(black, pixel_coords, mask = black)
