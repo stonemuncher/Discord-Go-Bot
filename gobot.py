@@ -155,6 +155,17 @@ def check_move(move, board_size = 19):
         y = board_size - int(move[1:]) 
         return x, y
 
+def make_points(black_pts, white_pts):
+
+    occupied_points = [ ]
+    for point in black_pts:
+        occupied_points.append(('b', point))
+    for point in white_pts:
+        occupied_points.append(('w', point)) 
+
+    return occupied_points
+
+
 @client.event
 async def on_ready():
     print("Go Bot is activated")
@@ -573,6 +584,9 @@ async def on_message(message):
                     game_info['scoring'] = False
                     save_game_info(game_info, guild_id_str, room_name)
                     next_turn_info = get_next_turn(game_info['turn'], game_info['p1_info'], game_info['p2_info'])
+
+                    occupied_points = make_points(game_info['b_moves'], game_info['w_moves'])
+                    save_board(guild_id_str, room_name, occupied_points)
                     await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Move {game_info["move_count"]}', f'The game between {game_info["p1_info"][0]} and {game_info["p2_info"][0]} has resumed!\n\n{next_turn_info}')
                     return
 
@@ -607,13 +621,9 @@ async def on_message(message):
                     #Save game info
                     save_game_info(game_info, guild_id_str, room_name)
 
-                    #generate occupied pts without using sgfmill (faster)
-                    occupied_points = []
-                    for point in game_info['b_alive']:
-                        occupied_points.append(('b', point))
-                    for point in game_info['w_alive']:
-                        occupied_points.append(('w', point))                            
-
+                    #generate occupied pts without using sgfmill (faster) - since no move is being inputted
+                    occupied_points = make_points(game_info['b_alive'], game_info['w_alive'])
+                      
                     save_board(guild_id_str, room_name, occupied_points)
 
                     #Send the board state
