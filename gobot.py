@@ -104,7 +104,7 @@ def get_game_type_info(type):
     else:
         return 'A standard game of 19x19 go.'
         
-def send_board(guild_id, room_name, message, title, desc):
+async def send_board(guild_id, room_name, message, title, desc):
 
     #Get the channel using id of a spam channel for sending images, to grab url to be used when editing embeds' images because discord.py == poopy and you can't edit an embed's image with a local image
     spam_channel = discord.utils.get(message.guild.channels, name='go-bot-spam')
@@ -144,7 +144,6 @@ def get_next_turn(turn, p1_info, p2_info):
 def check_move(move, board_size = 19):
 
     TOP_ROW_LETTERS = {19: 'abcdefghjklmnopqrst'}
-    move = command_text[1].lower()
 
     if (move[0] not in TOP_ROW_LETTERS[board_size]) or (not move[1:].isdigit()):
         return False, False
@@ -573,10 +572,10 @@ async def on_message(message):
 
                     game_info['scoring'] = False
                     next_turn_info = get_next_turn(game_info['turn'], game_info['p1_info'], game_info['p2_info'])
-                    send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Move {game_info["move_count"]}', f'The game has resumed!\n\n{next_turn_info}')
+                    await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Move {game_info["move_count"]}', f'The game has resumed!\n\n{next_turn_info}')
                     return
 
-                send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Scoring', 'Use !dead followed by the coordinates of dead stones to remove them from the board. E.g. !dead A5 B18 K10 C4. To resume the game and settle a dispute or to reset dead stones, use !resume')
+                await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Scoring', 'Use !dead followed by the coordinates of dead stones to remove them from the board. E.g. !dead A5 B18 K10 C4. To resume the game and settle a dispute or to reset dead stones, use !resume')
     
             else:
   #move this down              current_board.apply_setup(game_info['b_moves'], game_info['w_moves'], game_info['empty_pts'])
@@ -590,7 +589,7 @@ async def on_message(message):
                         x, y = check_move(stone)
                         move = (x, y)
                         if not(x and y):
-                            send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Scoring', f'{stone} not a valid coordinate! Try again.')
+                            await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Scoring', f'{stone} not a valid coordinate! Try again.')
                             return
                         elif move in game_info['b_alive']:
                             game_info['b_alive'].remove(move)
@@ -599,7 +598,7 @@ async def on_message(message):
                             game_info['w_alive'].remove(move)
                             game_info['empty_pts_scr'].append(move)
                         else:
-                            send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Scoring', f'There isn\'t a stone at {stone}. Please try again.')
+                            await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Scoring', f'There isn\'t a stone at {stone}. Please try again.')
                             return   
 
                     #Save game info
@@ -615,12 +614,12 @@ async def on_message(message):
                     save_board(guild_id_str, room_name, occupied_points)
 
                     #Send the board state
-                    send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Move {game_info["move_count"]}', 'Removed selected dead stones. Continue to remove dead stones or reset/resume with !resume if you made a mistake.')
+                    await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Move {game_info["move_count"]}', 'Removed selected dead stones. Continue to remove dead stones or reset/resume with !resume if you made a mistake.')
                         
 
                 else:
                     #Tell them to supply dead stones
-                    send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Scoring', 'You didn\'t list the coordinates of any stones! Type !dead followed by the coordinates of dead stones to remove them from the board. E.g. !dead A5 B18 K10 C4.')
+                    await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Scoring', 'You didn\'t list the coordinates of any stones! Type !dead followed by the coordinates of dead stones to remove them from the board. E.g. !dead A5 B18 K10 C4.')
 
 
             return
@@ -769,7 +768,7 @@ async def on_message(message):
             save_game_info(game_info, guild_id_str, room_name)
             
             #Send the board state
-            send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Move {game_info["move_count"]}', game_info['turn_info'])
+            await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Move {game_info["move_count"]}', game_info['turn_info'])
 
         else:
             await message.author.send('It\'s not your turn to make a move in that game!')
