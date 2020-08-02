@@ -607,9 +607,9 @@ async def on_message(message):
                     #Generate occupied points to be rendered onto the board
                     occupied_points = make_points(game_info['b_moves'], game_info['w_moves'])
                     
-                    #Setup new Board_img object (render normally so that all stones are shown - needed to mark which are dead or not)
+                    #Setup new Board_img object (render depending on type)
                     current_board_img = Board_img()
-                    current_board_img.render_board(occupied_points, render_type='normal')
+                    current_board_img.render_board(occupied_points, render_type=game_info['type'])
                     current_board_img.save_board(guild_id_str, room_name)
 
                     #Delete old board object
@@ -734,12 +734,12 @@ async def on_message(message):
                 if x == 'invalid' and y == 'invalid':
                     #Setup a help message incase the command was incorrect
                     embed = discord.Embed(colour = discord.Colour.purple(),
-                                        title = 'That wasn\'t a possible move!'
-                                        description = 'Here is how you can play your move in a game:')
+                                          title = 'That wasn\'t a possible move!',
+                                          description = 'Here is how you can play your move in a game:')
 
                     embed.add_field(name = '!play [move]', value = GAME_ROOM_CMDS['!play [move]'])
                     embed.set_footer(text = 'Good luck :)')
-                    message.author.send(embed=embed)
+                    await message.author.send(embed=embed)
                     return
 
 
@@ -809,6 +809,8 @@ async def on_message(message):
                     except:
                         game_info['turn_info'] += 'Something went wrong. Please try again.'
 
+                    embed_title =  f'{room_name.capitalize()} | Move {game_info["move_count"]}'
+
             #Command to pass
             elif message.content.startswith('!pass'):
 
@@ -820,16 +822,23 @@ async def on_message(message):
                     game_info['w_alive'] = game_info['w_moves']
                     game_info['empty_pts_scr'] = game_info['empty_pts']
 
+                    current_board_img = Board_img()
+                    current_board_img.render_board(occupied_points, render_type = 'normal')
+
+                    embed_title =  f'{room_name.capitalize()} | Remove the dead stones'
+
                 else:
                     #Edit game info for a pass move
                     game_info["last_move"] = 'pass'
                     game_info["turn_info"] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n{message.author.name} just passed!'
                     
-                
-                occupied_points = make_points(game_info['b_moves'], game_info['w_moves'])
+                    occupied_points = make_points(game_info['b_moves'], game_info['w_moves'])
 
-                current_board_img = Board_img()
-                current_board_img.render_board(occupied_points, render_type = 'normal')
+                    current_board_img = Board_img()
+                    current_board_img.render_board(occupied_points, render_type = game_info['type'])
+
+                    embed_title =  f'{room_name.capitalize()} | Move {game_info["move_count"]}'
+
                 current_board_img.save_board(guild_id_str, room_name)
 
                 del current_board_img
@@ -843,11 +852,9 @@ async def on_message(message):
 
             #Save game info
             save_game_info(game_info, guild_id_str, room_name)
-            
-            title =  f'{room_name.capitalize()} | Move {game_info["move_count"]}'
 
             #Send the board state
-            await send_board(guild_id_str, room_name, message, title, game_info['turn_info'])
+            await send_board(guild_id_str, room_name, message, embed_title, game_info['turn_info'])
 
         else:
             await message.author.send('It\'s not your turn to make a move in that game!')
