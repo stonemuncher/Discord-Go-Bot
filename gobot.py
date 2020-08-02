@@ -195,7 +195,7 @@ async def on_message(message):
                     game_type = 'blind'
 
             #If the sender already has a request open, tell them and don't make a new one
-            if message.author.id in requests:
+            if str(message.author.id) in requests:
 
                 await message.channel.send(f'You already have a game request open! Cancel it with !cancel before making another. {message.author.mention}')
 
@@ -253,13 +253,11 @@ async def on_message(message):
 
             requests = load_requests(guild_id_str)
             
-            response = ''
             count = 1
 
             #Set up embed
             embed = discord.Embed(colour = discord.Colour.purple(),
-                                  title = 'Showing all active game requests',
-                                  description = response)
+                                  title = 'Showing all active game requests')
 
             #Generate list of requests and format, and add to embed
             for request in requests:
@@ -271,7 +269,7 @@ async def on_message(message):
                 count += 1
 
             if count == 1:
-                response = 'There are no current active game requests! Why not open one yourself with !game?'
+                embed.add_field(name = 'Oh... it seems there aren\'t any.', value = 'Why not open one yourself with !game?')  
             
             embed.set_footer(text = 'Type !accept @user to accept a game!')
             await message.channel.send(embed=embed)
