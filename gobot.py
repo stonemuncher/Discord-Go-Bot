@@ -144,16 +144,18 @@ def get_next_turn(turn, p1_info, p2_info):
         return f'\n\nIt\'s now {p2_info[0]}\'s turn to play.'
 
 
-def check_move(move, board_size = 19):
+def check_and_convert_move(move, board_size = 19):
 
     TOP_ROW_LETTERS = {19: 'abcdefghjklmnopqrst'}
 
     if (move[0].lower() not in TOP_ROW_LETTERS[board_size]) or (not move[1:].isdigit()):
-        return False, False
+        return 'invalid', 'invalid'
 
     elif int(move[1:]) < 1 or int(move[1:]) > board_size:                      
-        return False, False
+        return 'invalid', 'invalid'
+
     else:
+
         x = TOP_ROW_LETTERS[board_size].index(move[0].lower())
         y = board_size - int(move[1:]) 
         return x, y
@@ -587,6 +589,7 @@ async def on_message(message):
                 
             return
 
+
         if game_info['scoring']:
             
             if not message.content.startswith('!dead'):
@@ -613,7 +616,7 @@ async def on_message(message):
                     del current_board_img
 
                     title = f'{room_name.capitalize()} | Move {game_info["move_count"]}'
-                    description = f'The game between {game_info["p1_info"][0]} and {game_info["p2_info"][0]} has resumed from scoring!\n\n{next_turn_info}'
+                    description = f'The game between {game_info["p1_info"][0]} and {game_info["p2_info"][0]} has resumed from scoring!{next_turn_info}'
                     await send_board(guild_id_str, room_name, message, title, description)
 
                     return
@@ -628,12 +631,11 @@ async def on_message(message):
                 if dead_stones:
 
                     for stone in dead_stones:
-                        print(stone)
                         
-                        x, y = check_move(stone)
+                        x, y = check_and_convert_move(stone)
                         move = [x, y]
-                        print(move)
-                        if not(x and y):
+
+                        if x == 'invalid' and y == 'invalid':
 
                             title = f'{room_name.capitalize()} | Remove the dead stones'
                             description = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n\
@@ -694,7 +696,7 @@ async def on_message(message):
                     #No stone coords were give
                     title = f'{room_name.capitalize()} | Remove the dead stones'
                     description = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n\
-                                    You didn\'t list the coordinates of any stones! {get_dead_cmd_help}'
+                                    You didn\'t list the coordinates of any stones! {get_dead_cmd_help()}'
 
                     await send_board(guild_id_str, room_name, message, title, description)
 
@@ -725,19 +727,21 @@ async def on_message(message):
 
                 command_text = message.content.split()
 
-                help_msg = 'To submit your next move, use the format !play [x][y] where x is a letter A-T and y a number 1-19. E.g. !play F6, !play G19.'
-                
-                if len(command_text) != 2:
-                    await message.author.send(help_msg)
-                    return
-                
                 move = command_text[1].lower()
 
-                x, y = check_move(move)
+                x, y = check_and_convert_move(move)
 
-                if x == False and y == False:
-                    await message.author.send(help_msg)
+                if x == 'invalid' and y == 'invalid':
+                    #Setup a help message incase the command was incorrect
+                    embed = discord.Embed(colour = discord.Colour.purple(),
+                                        title = 'That wasn\'t a possible move!'
+                                        description = 'Here is how you can play your move in a game:')
+
+                    embed.add_field(name = '!play [move]', value = GAME_ROOM_CMDS['!play [move]'])
+                    embed.set_footer(text = 'Good luck :)')
+                    message.author.send(embed=embed)
                     return
+
 
                 game_info["last_move"] = (x, y)
 
@@ -788,7 +792,7 @@ async def on_message(message):
                                     game_info['empty_pts'].append((x, y))
 
                         current_board_img = Board_img()
-                        current_board_img.render_board(current_board.list_occupied_points, render_type=game_info['type'])
+                        current_board_img.render_board(current_board.list_occupied_points(), render_type=game_info['type'])
                         current_board_img.save_board(guild_id_str, room_name)
 
                         del current_board_img
@@ -820,7 +824,7 @@ async def on_message(message):
                     #Edit game info for a pass move
                     game_info["last_move"] = 'pass'
                     game_info["turn_info"] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n{message.author.name} just passed!'
-                    game_info['move_count'] += 1
+                    
                 
                 occupied_points = make_points(game_info['b_moves'], game_info['w_moves'])
 
@@ -831,7 +835,7 @@ async def on_message(message):
                 del current_board_img
 
                 game_info['turn'] *= -1
-
+                game_info['move_count'] += 1
        
             if not game_info['scoring']:
 
