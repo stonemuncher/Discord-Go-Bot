@@ -589,7 +589,7 @@ async def on_message(message):
                         print(stone)
                         
                         x, y = check_move(stone)
-                        move = (x, y)
+                        move = [x, y]
                         print(move)
                         if not(x and y):
                             await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Scoring', f'{stone} is not a valid coordinate! Try again.')
