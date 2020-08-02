@@ -18,7 +18,7 @@ GAME_ROOM_CMDS = {'!play [move]': 'Play your move in a game. The format is !play
                   '!stop': 'Admin only command. Stop the game.'}
 
 GO_LOBBY_CMDS = {'!help': 'Get a list of commands.',
-                 '!game': 'Create a standard game request.',
+                 '!game [type]': 'If [type] is left blank, a normal game is made. Other types include \'onecolour\' (One colour go) and \'blind\' (Blind go)',
                  '!cancel': 'Cancel your game active game requests.',
                  '!requests': 'Get a list of active game requests.',
                  '!stopallgames' : 'Admin only command. Stops all games on the discord server.'}
@@ -84,7 +84,6 @@ def add_game_room_cmds(GAME_ROOM_CMDS, embed):
 
 
 def delete_game_data(room_name, guild_id):
-
     
     os.remove(f'data/{guild_id}/games/{room_name}.json')
 
@@ -94,7 +93,18 @@ def delete_game_data(room_name, guild_id):
         
         os.remove(f'data/{guild_id}/boards/{room_name}.png')
 
+def get_game_type_info(type):
+
+    if type == 'onecolour':
+        return 'One Colour Go - all stones appear white, it\'s down to you to remember which stone belongs to who!'
+
+    elif type == 'blind':
+        return 'Blind go - only the last move is shown! This is a real test of memory.'
+
+    else:
+        return 'A standard game of 19x19 go.'
         
+
 @client.event
 async def on_ready():
     print("Go Bot is activated")
@@ -169,23 +179,45 @@ async def on_message(message):
             #Load current requests
             requests = load_requests(guild_id_str)
 
+            #Grab args
+            args = message.content.split()
+
+            #Set default game type
+            game_type = 'normal'
+
+            #Check arguments for different type
+            if len(args) > 1:
+
+                if args[1] == 'onecolour':
+                    game_type = 'onecolour'
+
+                elif args[1] == 'blind':
+                    game_type = 'blind'
+
             #If the sender already has a request open, tell them and don't make a new one
-            if message.author.id in requests:
+            if str(message.author.id) in requests:
 
                 await message.channel.send(f'You already have a game request open! Cancel it with !cancel before making another. {message.author.mention}')
 
             else:
                 #Set up the request embed
                 embed = discord.Embed(colour = discord.Colour.purple(),
-                                      title = 'Game request',
-                                      description = f'Open game request from {message.author.name}. Type !accept {message.author.mention} to accept the request!')
+                                      title = f'Game request from {message.author.name}',
+                                      description = f'Type !accept {message.author.mention} to accept the request!')
+
+                #Create some info on the game request depending on the type
+                req_info = get_game_type_info(game_type)
+                
+                #Add info to embed
+                embed.add_field(name='Game type', value = req_info, inline = False)
 
                 try:
                     #Send the request embed
                     request_msg = await message.channel.send(embed=embed)
                     
                     #Add the message id of the request to the requests dict and save in the file
-                    requests[message.author.id] = request_msg.id
+                    requests[message.author.id] = {'msg_id': request_msg.id,
+                                                   'type': game_type}
                     
                     save_requests(requests, guild_id_str)
 
@@ -201,7 +233,7 @@ async def on_message(message):
             if str(message.author.id) in requests:
 
                 try:
-                    old_req = await message.channel.fetch_message(requests[str(message.author.id)])
+                    old_req = await message.channel.fetch_message(requests[str(message.author.id)]['msg_id'])
                     await old_req.delete()
                     del requests[str(message.author.id)]
                     
@@ -221,22 +253,25 @@ async def on_message(message):
 
             requests = load_requests(guild_id_str)
             
-            response = ''
             count = 1
-
-            #Generate list of requests and format
-            for request in requests:
-                response += f'{count}. Game request from <@{request}>. Use !accept <@{request}> to play!\n\n'
-                count += 1
-
-            if count == 1:
-                response = 'There are no current active game requests! Why not open one yourself with !game?'
 
             #Set up embed
             embed = discord.Embed(colour = discord.Colour.purple(),
-                                  title = 'Showing all active game requests',
-                                  description = response)
+                                  title = 'Showing all active game requests')
+
+            #Generate list of requests and format, and add to embed
+            for request in requests:
+
+                game_type = requests[str(request)]['type']
+                type_info = get_game_type_info(game_type)
+
+                embed.add_field(name = f'Game request #{count}', value = f'Creator: <@{request}>\nGame type: {type_info}')
+                count += 1
+
+            if count == 1:
+                embed.add_field(name = 'Oh... it seems there aren\'t any.', value = 'Why not open one yourself with !game?')  
             
+            embed.set_footer(text = 'Type !accept @user to accept a game!')
             await message.channel.send(embed=embed)
             
         #Command to accept a game request and start a game
@@ -256,7 +291,7 @@ async def on_message(message):
                 await message.channel.send(f'{message.author.mention} that user doesn\'t have an active game request.')
                 return
 
-
+            #get player objects
             player1 = message.author
             player2 = await client.fetch_user(requester_id)
 
@@ -264,8 +299,11 @@ async def on_message(message):
                 await message.channel.send('The player whose game request you accepted cannot be found. Perhaps they deleted their account.')
                 return
 
+            #save game type
+            game_type = requests[str(requester_id)]['type']
+            
             try:
-                    old_req = await message.channel.fetch_message(requests[str(requester_id)])
+                    old_req = await message.channel.fetch_message(requests[str(requester_id)]['msg_id'])
                     await old_req.delete()
 
                     #Remove the old request from the dictionary
@@ -319,7 +357,8 @@ async def on_message(message):
                           'p2_info': [player2.name, player2.id, p2_colour],
                           'room_id': room_id,
                           'move_count': 0,
-                          'ko': ()
+                          'ko': (),
+                          'type': game_type
                          }
             
             #Save info              
@@ -367,7 +406,7 @@ async def on_message(message):
 
             #Send confirmation that the game has stared to the lobby channel
             go_lobby = discord.utils.get(message.guild.text_channels, name='go-lobby')
-            await go_lobby.send(f'A game has started in {room_name} between <@{game_info["p1_info"][1]}> and <@{game_info["p2_info"][1]}>!')
+            await go_lobby.send(f'A game has started in {room_name} between <@{game_info["p1_info"][1]}> and <@{game_info["p2_info"][1]}>!\nGame type: {get_game_type_info(game_type)}')
 
 
 
@@ -518,9 +557,9 @@ async def on_message(message):
                 
                 x = TOP_ROW_LETTERS.index(move[0])
                 y = 19 - int(move[1:]) 
-                game_info["last_move"] = move
+                game_info["last_move"] = (x, y)
 
-                game_info["turn_info"] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\nLast move was {str(game_info["last_move"].capitalize())}: '
+                game_info["turn_info"] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\nLast move was {move.capitalize()}: '
 
                 if [x, y] == game_info['ko']:
                     game_info['turn_info'] += 'Uhh it\'s a ko! That\'s an illegal move.'
@@ -566,6 +605,16 @@ async def on_message(message):
                                 else:
                                     game_info['empty_pts'].append((x, y))
 
+                        #Save board depending now on game type
+                        if game_info['type'] == 'normal':
+                            save_board(guild_id_str, room_name, current_board.list_occupied_points())
+
+                        elif game_info['type'] == 'onecolour':
+                            save_board(guild_id_str, room_name, current_board.list_occupied_points(), one_colour = True)
+
+                        elif game_info['type'] == 'blind':
+                            save_board(guild_id_str, room_name, blind = True, last_move = game_info['last_move'])
+
                     #Called when a stone is placed in a spot already occupied
                     except ValueError: 
                         game_info['turn_info'] += 'Uh oh. This spot is already occupied by a stone!'
@@ -577,9 +626,6 @@ async def on_message(message):
                     #Eh wtf
                     except:
                         game_info['turn_info'] += 'Something went wrong. Please try again.'
-
-                    #Save the board as data/guild_id/boards/game-room-x.png
-                    save_board(guild_id_str, room_name, current_board.list_occupied_points())
 
             #Command to pass
             elif message.content.startswith('!pass'):
