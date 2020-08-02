@@ -15,6 +15,9 @@ args = parser.parse_args()
 GAME_ROOM_CMDS = {'!play [move]': 'Play your move in a game. The format is !play [Letter][Number] - e.g. !play A6, or !play B9.',
                   '!resign': 'Resign from the game.',
                   '!pass': 'Pass your turn.',
+                  '!dead [coordinates]': 'Mark dead stones during scoring. You can mark one stone at a time, e.g. !dead A6, or multiple - !dead A6 B9 L4 M7 etc etc.',
+                  '!resume': 'Resume the game from scoring to settle a dispute, or to reset the removed stones if a mistake was made.',
+                  '!done': 'Agree upon the removed dead stones, and end the game.',
                   '!stop': 'Admin only command. Stop the game.'}
 
 GO_LOBBY_CMDS = {'!help': 'Get a list of commands.',
@@ -155,15 +158,24 @@ def check_move(move, board_size = 19):
         y = board_size - int(move[1:]) 
         return x, y
 
+#This is used to avoid using sgfmill's board.list_occupied_points() when game logic is not needed to update
+#the black or white stone coordinates - such as during scoring where stones are removed manually if they 
+#are dead.
 def make_points(black_pts, white_pts):
 
     occupied_points = [ ]
+
     for point in black_pts:
         occupied_points.append(('b', point))
     for point in white_pts:
         occupied_points.append(('w', point)) 
 
     return occupied_points
+
+def get_dead_cmd_help():
+
+    return 'Use !dead followed by the coordinates of dead stones to remove them from the board.\
+            E.g. !dead A5 B18 K10 C4. Or to resume the game and settle a dispute or to reset dead stones, use !resume'
 
 
 @client.event
@@ -581,20 +593,36 @@ async def on_message(message):
                 
                 if message.content.startswith('!resume'):
 
+                    #Unset scoring check
                     game_info['scoring'] = False
+
                     save_game_info(game_info, guild_id_str, room_name)
+
+                    #Grab the info of who's turn it is next, since the game resumed
                     next_turn_info = get_next_turn(game_info['turn'], game_info['p1_info'], game_info['p2_info'])
 
+                    #Generate occupied points to be rendered onto the board
                     occupied_points = make_points(game_info['b_moves'], game_info['w_moves'])
-                    save_board(guild_id_str, room_name, occupied_points)
-                    await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Move {game_info["move_count"]}', f'The game between {game_info["p1_info"][0]} and {game_info["p2_info"][0]} has resumed!\n\n{next_turn_info}')
+                    
+                    #Setup new Board_img object (render normally so that all stones are shown - needed to mark which are dead or not)
+                    current_board_img = Board_img()
+                    current_board_img.render_board(occupied_points, render_type='normal')
+                    current_board_img.save_board(guild_id_str, room_name)
+
+                    #Delete old board object
+                    del current_board_img
+
+                    title = f'{room_name.capitalize()} | Move {game_info["move_count"]}'
+                    description = f'The game between {game_info["p1_info"][0]} and {game_info["p2_info"][0]} has resumed from scoring!\n\n{next_turn_info}'
+                    await send_board(guild_id_str, room_name, message, title, description)
+
                     return
 
-                await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Scoring', f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\nUse !dead followed by the coordinates of dead stones to remove them from the board. E.g. !dead A5 B18 K10 C4. To resume the game and settle a dispute or to reset dead stones, use !resume')
+                    #Add !done command here
+
+                return
     
             else:
-  #move this down              current_board.apply_setup(game_info['b_moves'], game_info['w_moves'], game_info['empty_pts'])
-
 
                 dead_stones = message.content.split()[1:]
                 if dead_stones:
@@ -606,16 +634,39 @@ async def on_message(message):
                         move = [x, y]
                         print(move)
                         if not(x and y):
-                            await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Scoring', f'{stone} is not a valid coordinate! Try again.')
+
+                            title = f'{room_name.capitalize()} | Remove the dead stones'
+                            description = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n\
+                                            {stone} is not a valid coordinate! {get_dead_cmd_help()}'
+
+                            await send_board(guild_id_str, room_name, message, title, description)
+
                             return
+
                         elif move in game_info['b_alive']:
+                            
+                            #Remove the stone coordinates from the list of alive stones
                             game_info['b_alive'].remove(move)
+
+                            #Append the stone coordinates to the list of empty intersections
                             game_info['empty_pts_scr'].append(move)
+
                         elif move in game_info['w_alive']:
+
+                            #Remove the stone coordinates from the list of alive stones
                             game_info['w_alive'].remove(move)
+
+                            #Append the stone coordinates to the list of empty intersections
                             game_info['empty_pts_scr'].append(move)
+
                         else:
-                            await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Scoring', f'There isn\'t a stone at {stone}. Please try again.')
+
+                            title = f'{room_name.capitalize()} | Remove the dead stones'
+                            description = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n\
+                                            There isn\'t a stone at {stone}. {get_dead_cmd_help()}'
+
+                            await send_board(guild_id_str, room_name, message, title, description)
+
                             return   
 
                     #Save game info
@@ -623,16 +674,29 @@ async def on_message(message):
 
                     #generate occupied pts without using sgfmill (faster) - since no move is being inputted
                     occupied_points = make_points(game_info['b_alive'], game_info['w_alive'])
-                      
-                    save_board(guild_id_str, room_name, occupied_points)
 
-                    #Send the board state
-                    await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Move {game_info["move_count"]}', 'Removed selected dead stones. Continue to remove dead stones or reset/resume with !resume if you made a mistake.')
-                        
+                    current_board_img = Board_img()
+                    current_board_img.render_board(occupied_points, render_type='normal')
+                    current_board_img.save_board(guild_id_str, room_name)
+
+                    del current_board_img
+
+                    title = f'{room_name.capitalize()} | Remove the dead stones'
+                    description = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n\
+                                    Removed selected dead stones. Continue to remove dead stones or reset/resume the game with !resume if you made a mistake.'
+
+                    await send_board(guild_id_str, room_name, message, title, description)
+                    
+
 
                 else:
-                    #Tell them to supply dead stones
-                    await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Scoring', 'You didn\'t list the coordinates of any stones! Type !dead followed by the coordinates of dead stones to remove them from the board. E.g. !dead A5 B18 K10 C4.')
+
+                    #No stone coords were give
+                    title = f'{room_name.capitalize()} | Remove the dead stones'
+                    description = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n\
+                                    You didn\'t list the coordinates of any stones! {get_dead_cmd_help}'
+
+                    await send_board(guild_id_str, room_name, message, title, description)
 
 
             return
@@ -724,15 +788,11 @@ async def on_message(message):
                                 else:
                                     game_info['empty_pts'].append((x, y))
 
-                        #Save board depending now on game type
-                        if game_info['type'] == 'normal':
-                            save_board(guild_id_str, room_name, current_board.list_occupied_points())
+                        current_board_img = Board_img()
+                        current_board_img.render_board(occupied_points, render_type=game_info['type'])
+                        current_board_img.save_board(guild_id_str, room_name)
 
-                        elif game_info['type'] == 'onecolour':
-                            save_board(guild_id_str, room_name, current_board.list_occupied_points(), one_colour = True)
-
-                        elif game_info['type'] == 'blind':
-                            save_board(guild_id_str, room_name, blind = True, last_move = game_info['last_move'])
+                        del current_board_img
 
                     #Called when a stone is placed in a spot already occupied
                     except ValueError: 
@@ -757,12 +817,14 @@ async def on_message(message):
                     game_info['w_alive'] = game_info['w_moves']
                     game_info['empty_pts_scr'] = game_info['empty_pts']
 
-                    occupied_points = []
-                    for point in game_info['b_moves']:
-                        occupied_points.append(('b', point))
-                    for point in game_info['w_moves']:
-                        occupied_points.append(('w', point))
-                    save_board(guild_id_str, room_name, occupied_points)
+                    occupied_points = make_points(game_info['b_moves'], game_info['w_moves'])
+
+                    current_board_img = Board_img()
+                    current_board_img.render_board(occupied_points, render_type = 'normal')
+                    current_board_img.save_board(guild_id_str, room_name)
+
+                    del current_board_img
+
                 else:
                     #Edit game info for a pass move
                     game_info["last_move"] = 'pass'
@@ -771,9 +833,7 @@ async def on_message(message):
                 
                 game_info['turn'] *= -1
 
-
-            #MOVED THIS BLOB TO CATER FOR !pass AND !play:
-            
+       
             if not game_info['scoring']:
 
                 game_info['turn_info'] += get_next_turn(game_info['turn'], game_info['p1_info'], game_info['p2_info'])
@@ -781,8 +841,10 @@ async def on_message(message):
             #Save game info
             save_game_info(game_info, guild_id_str, room_name)
             
+            title =  f'{room_name.capitalize()} | Move {game_info["move_count"]}'
+
             #Send the board state
-            await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Move {game_info["move_count"]}', game_info['turn_info'])
+            await send_board(guild_id_str, room_name, message, title, game_info['turn_info'])
 
         else:
             await message.author.send('It\'s not your turn to make a move in that game!')
