@@ -571,11 +571,12 @@ async def on_message(message):
                 if message.content.startswith('!resume'):
 
                     game_info['scoring'] = False
+                    save_game_info(game_info, guild_id_str, room_name)
                     next_turn_info = get_next_turn(game_info['turn'], game_info['p1_info'], game_info['p2_info'])
-                    await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Move {game_info["move_count"]}', f'The game has resumed!\n\n{next_turn_info}')
+                    await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Move {game_info["move_count"]}', f'The game between {game_info['p1_info'][0]} and {game_info['p2_info'][0]} has resumed!\n\n{next_turn_info}')
                     return
 
-                await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Scoring', 'Use !dead followed by the coordinates of dead stones to remove them from the board. E.g. !dead A5 B18 K10 C4. To resume the game and settle a dispute or to reset dead stones, use !resume')
+                await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Scoring', f'{game_info['p1_info'][0]} vs {game_info['p2_info'][0]}\n\nUse !dead followed by the coordinates of dead stones to remove them from the board. E.g. !dead A5 B18 K10 C4. To resume the game and settle a dispute or to reset dead stones, use !resume')
     
             else:
   #move this down              current_board.apply_setup(game_info['b_moves'], game_info['w_moves'], game_info['empty_pts'])
@@ -585,11 +586,13 @@ async def on_message(message):
                 if dead_stones:
 
                     for stone in dead_stones:
+                        print(stone)
                         
                         x, y = check_move(stone)
                         move = (x, y)
+                        print(move)
                         if not(x and y):
-                            await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Scoring', f'{stone} not a valid coordinate! Try again.')
+                            await send_board(guild_id_str, room_name, message, f'{room_name.capitalize()} | Scoring', f'{stone} is not a valid coordinate! Try again.')
                             return
                         elif move in game_info['b_alive']:
                             game_info['b_alive'].remove(move)
