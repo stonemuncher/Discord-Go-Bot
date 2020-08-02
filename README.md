@@ -14,7 +14,8 @@ Started work on this go bot for discord 28/07/20
 - [ ] Sort out stones overlapping with coordinates - need ideas for this
 - [x] Add a !pass
 - [ ] Track captures
-- [ ] Mark dead stones at end of game (manually) and count territory (automatically)
+- [x] Mark dead stones at end of game (manually) and 
+- [ ] count territory (automatically)
 - [ ] Make it so you can't play against yourself (good for testing)
 - [x] Add random colours (nigiri) at start of game, along with indicator of whose move it is
 - [ ] Exports - to sgf, png
