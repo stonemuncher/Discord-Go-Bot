@@ -813,7 +813,10 @@ async def on_message(message):
 
             #Command to pass
             elif message.content.startswith('!pass'):
-
+                
+                #Generate occupied points outside of sgfmill (faster) since no logic is involved
+                occupied_points = make_points(game_info['b_moves'], game_info['w_moves'])
+                
                 if game_info['last_move'] == 'pass':
 
                     game_info['turn_info'] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\nBoth players passed! Game entering scoring phase. (Not yet finished)'
@@ -831,8 +834,6 @@ async def on_message(message):
                     #Edit game info for a pass move
                     game_info["last_move"] = 'pass'
                     game_info["turn_info"] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n{message.author.name} just passed!'
-                    
-                    occupied_points = make_points(game_info['b_moves'], game_info['w_moves'])
 
                     current_board_img = Board_img()
                     current_board_img.render_board(occupied_points, render_type = game_info['type'])
