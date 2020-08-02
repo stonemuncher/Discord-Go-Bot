@@ -727,7 +727,6 @@ async def on_message(message):
 
                 help_msg = 'To submit your next move, use the format !play [x][y] where x is a letter A-T and y a number 1-19. E.g. !play F6, !play G19.'
                 
-                
                 if len(command_text) != 2:
                     await message.author.send(help_msg)
                     return
@@ -736,7 +735,7 @@ async def on_message(message):
 
                 x, y = check_move(move)
 
-                if not (x and y):
+                if x == False and y == False:
                     await message.author.send(help_msg)
                     return
 
@@ -789,7 +788,7 @@ async def on_message(message):
                                     game_info['empty_pts'].append((x, y))
 
                         current_board_img = Board_img()
-                        current_board_img.render_board(occupied_points, render_type=game_info['type'])
+                        current_board_img.render_board(current_board.list_occupied_points, render_type=game_info['type'])
                         current_board_img.save_board(guild_id_str, room_name)
 
                         del current_board_img
@@ -817,20 +816,20 @@ async def on_message(message):
                     game_info['w_alive'] = game_info['w_moves']
                     game_info['empty_pts_scr'] = game_info['empty_pts']
 
-                    occupied_points = make_points(game_info['b_moves'], game_info['w_moves'])
-
-                    current_board_img = Board_img()
-                    current_board_img.render_board(occupied_points, render_type = 'normal')
-                    current_board_img.save_board(guild_id_str, room_name)
-
-                    del current_board_img
-
                 else:
                     #Edit game info for a pass move
                     game_info["last_move"] = 'pass'
                     game_info["turn_info"] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n{message.author.name} just passed!'
                     game_info['move_count'] += 1
                 
+                occupied_points = make_points(game_info['b_moves'], game_info['w_moves'])
+
+                current_board_img = Board_img()
+                current_board_img.render_board(occupied_points, render_type = 'normal')
+                current_board_img.save_board(guild_id_str, room_name)
+
+                del current_board_img
+
                 game_info['turn'] *= -1
 
        
