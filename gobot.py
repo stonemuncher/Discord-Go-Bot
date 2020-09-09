@@ -15,6 +15,9 @@ args = parser.parse_args()
 GAME_ROOM_CMDS = {'!play [move]': 'Play your move in a game. The format is !play [Letter][Number] - e.g. !play A6, or !play B9.',
                   '!resign': 'Resign from the game.',
                   '!pass': 'Pass your turn.',
+                  '!dead [coordinates]': 'Mark dead stones during scoring. You can mark one stone at a time, e.g. !dead A6, or multiple - !dead A6 B9 L4 M7 etc etc.',
+                  '!resume': 'Resume the game from scoring to settle a dispute, or to reset the removed stones if a mistake was made.',
+                  '!done': 'Agree upon the removed dead stones, and end the game.',
                   '!stop': 'Admin only command. Stop the game.'}
 
 GO_LOBBY_CMDS = {'!help': 'Get a list of commands.',
@@ -104,6 +107,79 @@ def get_game_type_info(type):
     else:
         return 'A standard game of 19x19 go.'
         
+async def send_board(guild_id, room_name, message, title, desc):
+
+    #Get the channel using id of a spam channel for sending images, to grab url to be used when editing embeds' images because discord.py == poopy and you can't edit an embed's image with a local image
+    spam_channel = discord.utils.get(message.guild.channels, name='go-bot-spam')
+
+    new_board = await spam_channel.send(file=discord.File(f'data/{guild_id}/boards/{room_name}.png'))
+    
+    #Set up the embed
+    embed = discord.Embed(colour = discord.Colour.dark_orange(),
+                            title = title,
+                            description = desc,
+                            url = new_board.attachments[0].url)
+
+    #Again, scrape URL from spam channel in order to be able to update initial embed with the new image
+    embed.set_image(url=new_board.attachments[0].url) 
+    
+    #Set footer
+    embed.set_footer(text='Click the title for zoomable board!')
+    
+    #Get the last message in the channel, e.g. the initial embed sent by the bot
+    last_msg = await message.channel.history(limit=1).flatten()
+    
+    #Edit with new image url and title
+    await last_msg[0].edit(embed = embed)
+
+
+def get_next_turn(turn, p1_info, p2_info):
+
+    #Add a note as to whose turn it is now
+    if p1_info[2] == turn:
+        
+        return f'\n\nIt\'s now {p1_info[0]}\'s turn to play.'
+
+    else:
+        return f'\n\nIt\'s now {p2_info[0]}\'s turn to play.'
+
+
+def check_and_convert_move(move, board_size = 19):
+
+    TOP_ROW_LETTERS = {19: 'abcdefghjklmnopqrst'}
+
+    if (move[0].lower() not in TOP_ROW_LETTERS[board_size]) or (not move[1:].isdigit()):
+        return 'invalid', 'invalid'
+
+    elif int(move[1:]) < 1 or int(move[1:]) > board_size:                      
+        return 'invalid', 'invalid'
+
+    else:
+
+        x = TOP_ROW_LETTERS[board_size].index(move[0].lower())
+        y = board_size - int(move[1:]) 
+        return x, y
+
+#This is used to avoid using sgfmill's board.list_occupied_points() when game logic is not needed to update
+#the black or white stone coordinates - such as during scoring where stones are removed manually if they 
+#are dead.
+def make_points(black_pts, white_pts):
+
+    occupied_points = [ ]
+
+    for point in black_pts:
+        occupied_points.append(('b', point))
+    for point in white_pts:
+        occupied_points.append(('w', point)) 
+
+    return occupied_points
+
+def get_dead_cmd_help():
+
+    return 'Use !dead followed by the coordinates of dead stones to remove them from the board, e.g. !dead A6 B8.\n\n \
+            If you made a mistake and want to reset the dead stones, or want to resume the game, type !resume.\n\n \
+            Otherwise if all dead stones have been marked, type !done.'
+
 
 @client.event
 async def on_ready():
@@ -358,7 +434,8 @@ async def on_message(message):
                           'room_id': room_id,
                           'move_count': 0,
                           'ko': (),
-                          'type': game_type
+                          'type': game_type,
+                          'scoring': False
                          }
             
             #Save info              
@@ -513,7 +590,121 @@ async def on_message(message):
                 
             return
 
+
+        if game_info['scoring']:
+            
+            if not message.content.startswith('!dead'):
                 
+                if message.content.startswith('!resume'):
+
+                    #Unset scoring check
+                    game_info['scoring'] = False
+
+                    save_game_info(game_info, guild_id_str, room_name)
+
+                    #Grab the info of who's turn it is next, since the game resumed
+                    next_turn_info = get_next_turn(game_info['turn'], game_info['p1_info'], game_info['p2_info'])
+
+                    #Generate occupied points to be rendered onto the board
+                    occupied_points = make_points(game_info['b_moves'], game_info['w_moves'])
+                    
+                    #Setup new Board_img object (render depending on type)
+                    current_board_img = Board_img()
+                    current_board_img.render_board(occupied_points, render_type=game_info['type'])
+                    current_board_img.save_board(guild_id_str, room_name)
+
+                    #Delete old board object
+                    del current_board_img
+
+                    title = f'{room_name.capitalize()} | Move {game_info["move_count"]}'
+                    description = f'The game between {game_info["p1_info"][0]} and {game_info["p2_info"][0]} has resumed from scoring!{next_turn_info}'
+                    await send_board(guild_id_str, room_name, message, title, description)
+
+                    return
+
+                    #Add !done command here
+
+                return
+    
+            else:
+
+                dead_stones = message.content.split()[1:]
+                if dead_stones:
+
+                    for stone in dead_stones:
+                        
+                        x, y = check_and_convert_move(stone)
+                        move = [x, y]
+
+                        if x == 'invalid' and y == 'invalid':
+
+                            title = f'{room_name.capitalize()} | Remove the dead stones'
+                            description = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n\
+                                            {stone} is not a valid coordinate!\n\n{get_dead_cmd_help()}'
+
+                            await send_board(guild_id_str, room_name, message, title, description)
+
+                            return
+
+                        elif move in game_info['b_alive']:
+                            
+                            #Remove the stone coordinates from the list of alive stones
+                            game_info['b_alive'].remove(move)
+
+                            #Append the stone coordinates to the list of empty intersections
+                            game_info['empty_pts_scr'].append(move)
+
+                        elif move in game_info['w_alive']:
+
+                            #Remove the stone coordinates from the list of alive stones
+                            game_info['w_alive'].remove(move)
+
+                            #Append the stone coordinates to the list of empty intersections
+                            game_info['empty_pts_scr'].append(move)
+
+                        else:
+
+                            title = f'{room_name.capitalize()} | Remove the dead stones'
+                            description = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n\
+                                            There isn\'t a stone at {stone}.\n\n{get_dead_cmd_help()}'
+
+                            await send_board(guild_id_str, room_name, message, title, description)
+
+                            return   
+
+                    #Save game info
+                    save_game_info(game_info, guild_id_str, room_name)
+
+                    #generate occupied pts without using sgfmill (faster) - since no move is being inputted
+                    occupied_points = make_points(game_info['b_alive'], game_info['w_alive'])
+
+                    current_board_img = Board_img()
+                    current_board_img.render_board(occupied_points, render_type='normal')
+                    current_board_img.save_board(guild_id_str, room_name)
+
+                    del current_board_img
+
+                    title = f'{room_name.capitalize()} | Remove the dead stones'
+                    description = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n\
+                                    Removed selected dead stones. Continue to remove dead stones or or if you are finished type !done. \
+                                    If you made a mistake and want to reset the dead stones, or want to resume the game, type !resume.'
+
+                    await send_board(guild_id_str, room_name, message, title, description)
+                    
+
+
+                else:
+
+                    #No stone coords were give
+                    title = f'{room_name.capitalize()} | Remove the dead stones'
+                    description = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n\
+                                    You didn\'t list the coordinates of any stones!\n\n{get_dead_cmd_help()}'
+
+                    await send_board(guild_id_str, room_name, message, title, description)
+
+
+            return
+
         #Check if the sender is one of the players in the game and that it is their turn
         if (message.author.id == game_info['p1_info'][1] and game_info['p1_info'][2] == game_info['turn']) or (message.author.id == game_info['p2_info'][1] and game_info['p2_info'][2] == game_info['turn']):
 
@@ -536,27 +727,24 @@ async def on_message(message):
             #Play move command for players in the game
             if message.content.startswith('!play'):
 
-                TOP_ROW_LETTERS = 'abcdefghjklmnopqrst'
                 command_text = message.content.split()
 
-                help_msg = 'To submit your next move, use the format !play [x][y] where x is a letter A-T and y a number 1-19. E.g. !play F6, !play G19.'
-                
-                if len(command_text) != 2:
-                    await message.author.send(help_msg)
-                    return
-                
                 move = command_text[1].lower()
 
-                if (move[0] not in TOP_ROW_LETTERS) or (not move[1:].isdigit()):
-                    await message.author.send(help_msg)
+                x, y = check_and_convert_move(move)
+
+                if x == 'invalid' and y == 'invalid':
+                    #Setup a help message incase the command was incorrect
+                    embed = discord.Embed(colour = discord.Colour.purple(),
+                                          title = 'That wasn\'t a possible move!',
+                                          description = 'Here is how you can play your move in a game:')
+
+                    embed.add_field(name = '!play [move]', value = GAME_ROOM_CMDS['!play [move]'])
+                    embed.set_footer(text = 'Good luck :)')
+                    await message.author.send(embed=embed)
                     return
-                
-                elif int(move[1:]) < 1 or int(move[1:]) > 19:                      
-                    await message.author.send(help_msg)
-                    return
-                
-                x = TOP_ROW_LETTERS.index(move[0])
-                y = 19 - int(move[1:]) 
+
+
                 game_info["last_move"] = (x, y)
 
                 game_info["turn_info"] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\nLast move was {move.capitalize()}: '
@@ -605,15 +793,11 @@ async def on_message(message):
                                 else:
                                     game_info['empty_pts'].append((x, y))
 
-                        #Save board depending now on game type
-                        if game_info['type'] == 'normal':
-                            save_board(guild_id_str, room_name, current_board.list_occupied_points())
+                        current_board_img = Board_img()
+                        current_board_img.render_board(current_board.list_occupied_points(), render_type=game_info['type'])
+                        current_board_img.save_board(guild_id_str, room_name)
 
-                        elif game_info['type'] == 'onecolour':
-                            save_board(guild_id_str, room_name, current_board.list_occupied_points(), one_colour = True)
-
-                        elif game_info['type'] == 'blind':
-                            save_board(guild_id_str, room_name, blind = True, last_move = game_info['last_move'])
+                        del current_board_img
 
                     #Called when a stone is placed in a spot already occupied
                     except ValueError: 
@@ -627,59 +811,54 @@ async def on_message(message):
                     except:
                         game_info['turn_info'] += 'Something went wrong. Please try again.'
 
+                    embed_title =  f'{room_name.capitalize()} | Move {game_info["move_count"]}'
+
             #Command to pass
             elif message.content.startswith('!pass'):
+                
+                #Generate occupied points outside of sgfmill (faster) since no logic is involved
+                occupied_points = make_points(game_info['b_moves'], game_info['w_moves'])
 
                 if game_info['last_move'] == 'pass':
 
                     game_info['turn_info'] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\nBoth players passed! Game entering scoring phase. (Not yet finished)'
-                    #Add stuff in here for scoring mode.
+                    game_info['scoring'] = True
+                    game_info['b_alive'] = game_info['b_moves']
+                    game_info['w_alive'] = game_info['w_moves']
+                    game_info['empty_pts_scr'] = game_info['empty_pts']
+
+                    current_board_img = Board_img()
+                    current_board_img.render_board(occupied_points, render_type = 'normal')
+
+                    embed_title =  f'{room_name.capitalize()} | Remove the dead stones'
+
                 else:
                     #Edit game info for a pass move
                     game_info["last_move"] = 'pass'
                     game_info["turn_info"] = f'{game_info["p1_info"][0]} vs {game_info["p2_info"][0]}\n\n{message.author.name} just passed!'
-                    game_info['turn'] *= -1
-                    game_info['move_count'] += 1
 
+                    current_board_img = Board_img()
+                    current_board_img.render_board(occupied_points, render_type = game_info['type'])
 
-                #MOVED THIS BLOB TO CATER FOR !pass AND !play:
-                        
-            #Add a note as to whose turn it is now
-            if message.author.id == game_info['p1_info'][1]:
-                
-                game_info['turn_info'] += f'\n\nIt\'s now {game_info["p2_info"][0]}\'s turn to play.'
+                    embed_title =  f'{room_name.capitalize()} | Move {game_info["move_count"]}'
 
-            else:
-                game_info['turn_info'] += f'\n\nIt\'s now {game_info["p1_info"][0]}\'s turn to play.'
+                current_board_img.save_board(guild_id_str, room_name)
+
+                del current_board_img
+
+                game_info['turn'] *= -1
+                game_info['move_count'] += 1
+       
+            if not game_info['scoring']:
+
+                game_info['turn_info'] += get_next_turn(game_info['turn'], game_info['p1_info'], game_info['p2_info'])
 
             #Save game info
             save_game_info(game_info, guild_id_str, room_name)
-            
-            #Get the channel using id of a spam channel for sending images, to grab url to be used when editing embeds' images because discord.py == poopy and you can't edit an embed's image with a local image
-            spam_channel = discord.utils.get(message.guild.channels, name='go-bot-spam')
 
-            new_board = await spam_channel.send(file=discord.File(f'data/{guild_id_str}/boards/{room_name}.png'))
+            #Send the board state
+            await send_board(guild_id_str, room_name, message, embed_title, game_info['turn_info'])
 
-            #Set up the embed
-            embed = discord.Embed(colour = discord.Colour.dark_orange(),
-                                  title = f'{room_name.capitalize()} | Move {game_info["move_count"]}',
-                                  description = game_info['turn_info'],
-                                  url = new_board.attachments[0].url)
-            
-            #Again, scrape URL from spam channel in order to be able to update initial embed with the new image
-            embed.set_image(url=new_board.attachments[0].url) 
-            
-            #Set footer
-            embed.set_footer(text='Click the title for zoomable board!')
-            
-            #Get the last message in the channel, e.g. the initial embed sent by the bot
-            last_msg = await message.channel.history(limit=1).flatten()
-            
-            #Edit with new image url and title
-            await last_msg[0].edit(embed = embed)
-            
-
-                
         else:
             await message.author.send('It\'s not your turn to make a move in that game!')
 
